@@ -1,0 +1,83 @@
+{
+  "at": "2026-11-11T07:41:21.988Z",
+  "same_record_after_actual_process_restart": true,
+  "same_id_on_repeat_http_submission": true,
+  "events_unchanged": true,
+  "workflow": {
+    "id": "d88f143b-ad52-491a-8075-8de4f8db4a81",
+    "status": "blocked",
+    "stage": "plan",
+    "submission": {
+      "repo": "C:\\Users\\adachen\\OneDrive - Microsoft\\PERSONAL\\Obsidian\\cwz-notes\\AI Learning\\20261111 - AI manager\\src\\.aim-data\\acceptance\\directory-scoped-repo",
+      "base_commit": "5ccd8376b011c4d64c658271ef07c3f39cd8c864",
+      "feature": "Add clamp(value, lower, upper). Return lower or upper outside bounds, preserve in-range values, raise ValueError when lower > upper. Add normal and boundary pytest tests. No ambiguities.",
+      "allowed_paths": [
+        "product",
+        "tests"
+      ],
+      "test_paths": [
+        "tests"
+      ],
+      "acceptance": [
+        "In-range values are preserved",
+        "Values outside bounds clamp to nearest bound",
+        "Invalid lower > upper raises ValueError"
+      ],
+      "test_command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "idempotency_key": "f645b071-82b2-4d11-a710-bc8acfea7111",
+      "authorized": true,
+      "timeout_seconds": 300
+    },
+    "threads": {},
+    "tasks": {},
+    "attempts": [],
+    "messages": [],
+    "approvals": [
+      {
+        "approved": true,
+        "time": "2026-11-11T07:34:44.060026+00:00"
+      }
+    ],
+    "commits": {
+      "base": "5ccd8376b011c4d64c658271ef07c3f39cd8c864"
+    },
+    "worktrees": {},
+    "results": {},
+    "repair_count": 0,
+    "retry_count": 0,
+    "cancel_requested": false,
+    "reason": "Codex adapter blocked: STRICT_SCOPE_UNVERIFIED: narrow Test cwd denied sibling/product/Git-root writes in a real SDK probe, but arbitrary backend file allowlists, reparse-point escapes, network denial, config/tool isolation and app-server custom profiles are not end-to-end verified. No production run is dispatched.",
+    "created_at": "2026-11-11T07:34:44.060026+00:00",
+    "updated_at": "2026-11-11T07:34:44.146684+00:00"
+  },
+  "adapter_health": {
+    "ready": false,
+    "blocked": true,
+    "status": "blocked",
+    "sdk_version": "0.153.4",
+    "transport": "typescript-sdk",
+    "start_thread": true,
+    "resume_thread": true,
+    "stream_events": true,
+    "abort_signal": true,
+    "requested_approvals": "never",
+    "requested_network": "disabled",
+    "command_network_enforced": false,
+    "directory_write_boundary_probe": "passed-for-test-and-dev-fixtures",
+    "strict_write_scopes": false,
+    "roles": {
+      "manager": "blocked",
+      "dev": "blocked",
+      "test": "blocked"
+    },
+    "blocker": "NETWORK_SANDBOX_NOT_ENFORCED: real Windows SDK Dev probe connected over raw TCP to an adapter-owned localhost listener despite networkAccessEnabled=false and sandbox_workspace_write.network_access=false. Test/Dev directory writes were bounded in fixtures, but localhost backend access can bypass those boundaries. All production dispatch remains fail-closed."
+  },
+  "note": "Real restart/idempotency of blocked workflow only; stage-boundary and in-flight recovery are separately automated tests."
+}

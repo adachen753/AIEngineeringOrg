@@ -1,0 +1,16 @@
+{
+  "started_at": "2026-11-11T07:34:48.032Z",
+  "status": "aborted",
+  "thread_id": "01a1c987-e47d-7ea3-8812-6bb7d5075018",
+  "result": null,
+  "events": [
+    {
+      "type": "thread.started",
+      "thread_id": "01a1c987-e47d-7ea3-8812-6bb7d5075018"
+    }
+  ],
+  "abort_requested": true,
+  "error": "The operation was aborted",
+  "error_code": "ABORT_ERR",
+  "finished_at": "2026-11-11T07:34:51.322Z"
+}

@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-11",
+  "python": {
+    "broad": {
+      "command": "./.venv/Scripts/python.exe -B -m pytest tests -q -p no:cacheprovider -o asyncio_default_fixture_loop_scope=function",
+      "passed": 192,
+      "exit_code": 0,
+      "elapsed_seconds": 370.01,
+      "note": "Before last six test additions"
+    },
+    "latest_core": {
+      "command": "./.venv/Scripts/python.exe -B -m pytest tests/test_engine_unit.py tests/test_review_regressions.py tests/test_git_integration.py -q -p no:cacheprovider -o asyncio_default_fixture_loop_scope=function",
+      "passed": 72,
+      "exit_code": 0,
+      "elapsed_seconds": 228.12
+    },
+    "current_collected": 198,
+    "provenance": "Python execution results reported by implementation test subagent; main independently checked current collection and pip check"
+  },
+  "adapter": {
+    "command": "node --test adapter/test/*.test.ts",
+    "passed": 7,
+    "exit_code": 0,
+    "provenance": "Repeated by main; actual SDK experiments are separate files"
+  },
+  "limitations": [
+    "Mock agent outputs do not establish real feature acceptance",
+    "No single full 198-case execution claim"
+  ]
+}

@@ -1,0 +1,15 @@
+✔ request validation, protected paths, schema subset and stable digest (8.7498ms)
+✔ privacy drops reasoning, command stdout, MCP payloads and credential keys (3.3362ms)
+✔ production fails closed before SDK construction; duplicate IDs never redispatch (32.5784ms)
+✔ isolated fake engine tests success, binding, persistence and explicit resume (69.2074ms)
+✔ fake-only cancel, timeout, one-run limit and errors (1044.8954ms)
+✔ restart marks ambiguous running delivery interrupted and prohibits replay (39.7977ms)
+✔ real localhost HTTP health, blocked POST, GET, cancel and browser protection (103.0009ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1715.5288

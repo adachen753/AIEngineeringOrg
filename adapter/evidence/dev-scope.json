@@ -1,0 +1,81 @@
+{
+  "started_at": "2026-11-11T07:32:04.605Z",
+  "cwd": "C:\\Users\\adachen\\OneDrive - Microsoft\\PERSONAL\\Obsidian\\cwz-notes\\AI Learning\\20261111 - AI manager\\src\\adapter\\runtime\\dev-scope-fixtures/case-g0WweB",
+  "allowed_paths": [
+    "product",
+    "tests"
+  ],
+  "status": "succeeded",
+  "thread_id": "01a1c985-65ae-72f2-87cc-b0eb39099d02",
+  "result": {
+    "product": "write-allowed",
+    "tests": "write-allowed",
+    "git_root": "EPERM",
+    "git_metadata": "EPERM",
+    "sibling": "EPERM",
+    "raw_loopback_network": "connected"
+  },
+  "events": [
+    {
+      "type": "thread.started",
+      "thread_id": "01a1c985-65ae-72f2-87cc-b0eb39099d02"
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_0",
+        "type": "error",
+        "message": "Under-development features enabled: standalone_web_search. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in C:\\Users\\adachen\\.codex\\config.toml."
+      }
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_1",
+        "type": "error",
+        "message": "Model metadata for `gpt-6.1-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+      }
+    },
+    {
+      "type": "turn.started"
+    },
+    {
+      "type": "item.started",
+      "item": {
+        "id": "item_2",
+        "type": "command_execution",
+        "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"& 'C:/Users/adachen/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe' ./probe.cjs 50754\"",
+        "status": "in_progress",
+        "exit_code": null
+      }
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_2",
+        "type": "command_execution",
+        "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"& 'C:/Users/adachen/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe' ./probe.cjs 50754\"",
+        "status": "completed",
+        "exit_code": 0
+      }
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_3",
+        "type": "agent_message"
+      }
+    },
+    {
+      "type": "turn.completed",
+      "usage": {
+        "input_tokens": 35444,
+        "cached_input_tokens": 14967,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 100
+      }
+    }
+  ],
+  "observed_command_output": "{\"product\":\"write-allowed\",\"tests\":\"write-allowed\",\"git_root\":\"EPERM\",\"git_metadata\":\"EPERM\",\"sibling\":\"EPERM\",\"raw_loopback_network\":\"connected\"}\n",
+  "finished_at": "2026-11-11T07:32:18.737Z"
+}

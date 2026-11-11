@@ -1,0 +1,49 @@
+{
+  "at": "2026-11-11T07:35:09.411Z",
+  "adapter": {
+    "ready": false,
+    "blocked": true,
+    "status": "blocked",
+    "sdk_version": "0.153.4",
+    "transport": "typescript-sdk",
+    "start_thread": true,
+    "resume_thread": true,
+    "stream_events": true,
+    "abort_signal": true,
+    "requested_approvals": "never",
+    "requested_network": "disabled",
+    "strict_write_scopes": false,
+    "roles": {
+      "manager": "blocked",
+      "dev": "blocked",
+      "test": "blocked"
+    },
+    "blocker": "STRICT_SCOPE_UNVERIFIED: narrow Test cwd denied sibling/product/Git-root writes in a real SDK probe, but arbitrary backend file allowlists, reparse-point escapes, network denial, config/tool isolation and app-server custom profiles are not end-to-end verified. No production run is dispatched."
+  },
+  "backend": {
+    "status": "ok"
+  },
+  "ui": {
+    "health": "ok"
+  },
+  "processes": [
+    {
+      "name": "adapter",
+      "pid": 52008,
+      "started": "639299792509437588",
+      "executable": "C:\\Users\\adachen\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe"
+    },
+    {
+      "name": "backend",
+      "pid": 29732,
+      "started": "639299792517480232",
+      "executable": "C:\\Users\\adachen\\OneDrive - Microsoft\\PERSONAL\\Obsidian\\cwz-notes\\AI Learning\\20261111 - AI manager\\src\\.venv\\Scripts\\python.exe"
+    },
+    {
+      "name": "ui",
+      "pid": 46672,
+      "started": "639299792571381618",
+      "executable": "C:\\Users\\adachen\\OneDrive - Microsoft\\PERSONAL\\Obsidian\\cwz-notes\\AI Learning\\20261111 - AI manager\\src\\.venv\\Scripts\\python.exe"
+    }
+  ]
+}

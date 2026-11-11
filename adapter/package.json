@@ -1,0 +1,18 @@
+{
+  "name": "aim-codex-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24.0.0" },
+  "scripts": {
+    "start": "node src/server.ts",
+    "test": "node --test test/*.test.ts",
+    "experiment": "node scripts/experiment.ts"
+  },
+  "dependencies": {
+    "@openai/codex-sdk": "file:vendor/codex-sdk-npm-0.153.4.tgz"
+  },
+  "overrides": {
+    "@openai/codex": "file:vendor/codex-npm-0.153.4.tgz"
+  }
+}

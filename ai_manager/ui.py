@@ -1,0 +1,104 @@
+import json
+import os
+import uuid
+from urllib.parse import quote
+
+import streamlit as st
+
+from ai_manager.cli import api_request
+
+
+def main():
+    st.set_page_config(page_title="AI Engineering Manager", layout="wide")
+    st.title("AI Engineering Manager")
+    st.caption("客户端仅调用后台；关闭页面不会取消任务。仅展示已保存的公开执行证据。")
+    base_url = st.sidebar.text_input("API URL", os.environ.get("AIM_API_URL", "http://127.0.0.1:8765"))
+    st.session_state.setdefault("submission_key", str(uuid.uuid4()))
+
+    def request(path, payload=None):
+        try:
+            return api_request(base_url, path, payload)
+        except (RuntimeError, ValueError) as exc:
+            st.error(str(exc))
+            return None
+
+    with st.expander("提交 Feature"):
+        with st.form("submit"):
+            repo = st.text_input("仓库绝对路径")
+            base_commit = st.text_input("Base commit")
+            feature = st.text_area("Feature / Manager 需求")
+            allowed = st.text_area("允许修改路径（每行一个）")
+            tests = st.text_area("授权测试路径（每行一个）")
+            acceptance = st.text_area("验收条件（每行一个）")
+            command = st.text_input("测试命令（JSON 参数数组）",
+                                    '["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]')
+            timeout = st.number_input("超时秒数", min_value=10, max_value=3600, value=300)
+            authorized = st.checkbox("授权在隔离 worktree 内修改上述范围并执行指定测试", value=False)
+            key = st.text_input("提交幂等键（网络失败后保留同一键）", st.session_state.submission_key)
+            submitted = st.form_submit_button("提交")
+        if submitted:
+            try:
+                test_command = json.loads(command)
+                if not isinstance(test_command, list) or not all(isinstance(item, str) for item in test_command):
+                    raise ValueError("测试命令必须是字符串数组")
+
+                def lines(value):
+                    return [line.strip() for line in value.splitlines() if line.strip()]
+
+                result = request("/workflows", {
+                    "repo": repo, "base_commit": base_commit, "feature": feature,
+                    "allowed_paths": lines(allowed), "test_paths": lines(tests),
+                    "acceptance": lines(acceptance), "test_command": test_command,
+                    "idempotency_key": key, "authorized": authorized, "timeout_seconds": int(timeout),
+                })
+                if result is not None:
+                    st.session_state["workflow_id"] = result["id"]
+                    st.success("提交已保存；未授权任务等待审批。新任务请使用新的幂等键。")
+            except ValueError as exc:
+                st.error(str(exc))
+
+    if st.button("刷新后台状态"):
+        st.rerun()
+    workflows = request("/workflows")
+    if workflows is not None:
+        st.dataframe(workflows, use_container_width=True)
+    workflow_id = st.text_input("Workflow ID（可恢复展示）", key="workflow_id")
+    if not workflow_id:
+        return
+    path = "/workflows/" + quote(workflow_id, safe="")
+    detail = request(path)
+    if detail is None:
+        return
+    st.subheader("状态 / 阶段 / Thread IDs / 提交")
+    st.json(detail)
+    with st.form("input"):
+        text = st.text_area("向 Manager 补充需求 / 回答澄清")
+        if st.form_submit_button("发送补充") and text.strip():
+            if request(path + "/input", {"text": text}) is not None:
+                st.rerun()
+    approved = st.checkbox("明确授权此任务的已提交路径和命令", value=False)
+    if st.button("批准", disabled=not approved):
+        if request(path + "/approve", {"approved": True}) is not None:
+            st.rerun()
+    if st.button("显式重试"):
+        if request(path + "/retry", {}) is not None:
+            st.rerun()
+    if st.button("取消任务"):
+        if request(path + "/cancel", {}) is not None:
+            st.rerun()
+    st.subheader("实际事件 / 对话 / 命令")
+    events = request(path + "/events")
+    if events is not None:
+        st.json(events)
+    st.subheader("产物 / Diff / 日志 / 报告")
+    artifacts = request(path + "/artifacts")
+    if artifacts is not None:
+        st.json(artifacts)
+        for artifact in artifacts:
+            name = artifact.get("name")
+            if name:
+                st.link_button(name, base_url.rstrip("/") + path + "/artifacts/" + quote(name, safe=""))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,83 @@
+{
+  "started_at": "2026-11-11T07:27:38.847Z",
+  "cwd": "C:\\Users\\adachen\\OneDrive - Microsoft\\PERSONAL\\Obsidian\\cwz-notes\\AI Learning\\20261111 - AI manager\\src\\adapter\\runtime\\scope\\tests",
+  "status": "succeeded",
+  "thread_id": "01a1c981-5724-73c0-b6a8-5fc6eff94678",
+  "result": {
+    "inside": "write-allowed",
+    "product": "EPERM",
+    "git_root": "EPERM",
+    "parent": "EPERM",
+    "product_read": "product fixture; must stay unchanged"
+  },
+  "events": [
+    {
+      "type": "thread.started",
+      "thread_id": "01a1c981-5724-73c0-b6a8-5fc6eff94678"
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_0",
+        "type": "error",
+        "message": "Under-development features enabled: standalone_web_search. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in C:\\Users\\adachen\\.codex\\config.toml."
+      }
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_1",
+        "type": "error",
+        "message": "Model metadata for `gpt-6.1-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+      }
+    },
+    {
+      "type": "turn.started"
+    },
+    {
+      "type": "item.started",
+      "item": {
+        "id": "item_2",
+        "type": "command_execution",
+        "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"& 'C:/Users/adachen/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe' './probe.cjs'\"",
+        "status": "in_progress",
+        "exit_code": null
+      }
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_2",
+        "type": "command_execution",
+        "command": "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command \"& 'C:/Users/adachen/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe' './probe.cjs'\"",
+        "status": "completed",
+        "exit_code": 0
+      }
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "item_3",
+        "type": "agent_message"
+      }
+    },
+    {
+      "type": "turn.completed",
+      "usage": {
+        "input_tokens": 34516,
+        "cached_input_tokens": 5487,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 93
+      }
+    }
+  ],
+  "observed_command_output": "{\"inside\":\"write-allowed\",\"product\":\"EPERM\",\"git_root\":\"EPERM\",\"parent\":\"EPERM\",\"product_read\":\"product fixture; must stay unchanged\"}\n",
+  "observed_final_message": {
+    "inside": "write-allowed",
+    "product": "EPERM",
+    "git_root": "EPERM",
+    "parent": "EPERM",
+    "product_read": "product fixture; must stay unchanged"
+  },
+  "finished_at": "2026-11-11T07:27:51.992Z"
+}
