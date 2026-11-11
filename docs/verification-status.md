@@ -1,5 +1,9 @@
 # 交付与验证状态 — 2026-11-11
 
+本轮新增 feature/integration 分支、独立只读 Reviewer、角色配置快照和 JSON/Markdown 输入。以下既有运行记录属于扩展前历史证据，不证明新流程已真实运行；生产执行仍保持 fail-closed。
+
+本轮测试：全量执行 269 通过、1 个过期 retry 夹具失败；夹具更新后稳定版 Engine/分支回归 58 通过，适配层 7 通过，角色配置的 9 个资源已验证包含在 wheel 中。这不等于一次全量 270 通过。详细结果见 `docs/evidence/feature-role-extension-tests.json`。本地工作流测试使用受控 Agent 输出和真实临时 Git/pytest；没有真实 SDK 自动交付成功记录。
+
 **未完成完整 MVP 真实验收。生产角色执行有意保持 fail-closed。没有用 mock、降低断言或宽权限冒充真实成功。**
 
 ## 已实现
@@ -45,3 +49,6 @@ docs/evidence/ 保存 SDK 原始公开证据、实际 UI workflow、启动健康
 应用测试中的真实 temp Git/pytest/SQLite/API 与 mock agent 测试在名称和说明中区分。
 要恢复展示本次实际阻塞记录，用 scripts/start.ps1 -UI -DataDir '.aim-data/launch-smoke'，然后在 UI 输入上述 workflow ID（默认端口可用时）；状态来自同一 SQLite。
 最终已停止本次启动的服务，数据、worktree 和证据保留。未修改输入笔记或受保护目录，未提交、push、stash、clean、reset 或移动用户文件。
+# 本轮扩展状态
+
+新增 feature/integration 分支、独立只读 Reviewer、角色配置快照以及 JSON/Markdown 输入。下文和 docs/evidence 中已有 SDK 实验及任务运行记录属于扩展前的历史证据；不证明新增分支审查交付流程已真实执行。生产适配层仍 fail-closed，不能宣称自动开发交付已完成。新单元/本地 Git 回归结果应单独记录。

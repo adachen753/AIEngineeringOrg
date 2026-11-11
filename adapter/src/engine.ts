@@ -28,11 +28,12 @@ export class SdkEngine {
   }
 
   async run(request: RunRequest, signal: AbortSignal, onEvent: (event: ThreadEvent) => void): Promise<unknown> {
+    const readOnly = request.role === 'manager' || request.role === 'reviewer';
     const roots = (request.role === 'test' ? request.test_paths ?? request.allowed_paths : request.allowed_paths)?.map(directory => canonicalDirectory(path.resolve(request.cwd, directory))) ?? [];
     if (roots.some(directory => !within(request.cwd, directory))) throw new Error('INVALID_SCOPE');
     const options = {
-      workingDirectory: request.role === 'manager' || !roots.length ? request.cwd : roots[0],
-      sandboxMode: request.role === 'manager' ? 'read-only' as const : 'workspace-write' as const,
+      workingDirectory: readOnly || !roots.length ? request.cwd : roots[0],
+      sandboxMode: readOnly ? 'read-only' as const : 'workspace-write' as const,
       approvalPolicy: 'never' as const,
       networkAccessEnabled: false,
       webSearchMode: 'disabled' as const,

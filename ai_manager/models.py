@@ -51,7 +51,7 @@ class AgentResult(BaseModel):
     classification: Literal["none", "product_bug", "test_issue", "data_issue", "environment", "flaky", "unknown"]
     mappings: list[AcceptanceMapping] = []
 
-STAGES = ["plan", "dev", "test", "verify", "report", "done"]
+STAGES = ["plan", "dev", "test", "verify", "review", "integrate", "integration_verify", "report", "done"]
 TERMINAL = {"succeeded", "failed", "blocked", "cancelled", "interrupted"}
 TRANSITIONS = {
     "queued": {"running", "cancelled"},

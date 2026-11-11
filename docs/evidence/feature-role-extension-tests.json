@@ -1,0 +1,45 @@
+{
+  "scope": "Feature branches, independent reviewer, integration delivery, role snapshots and submission files",
+  "production_sdk_workflow": "blocked; no actual Dev/Test/Reviewer dispatch claimed",
+  "full_suite": {
+    "command": ".venv/Scripts/python.exe -m pytest -q",
+    "passed": 269,
+    "failed": 1,
+    "seconds": 665.8,
+    "caveat": "In-flight suite used an obsolete retry fixture without feature-branch ownership. Fixture was updated and the full engine/branch subset rerun after patches stabilized. This is not a single all-270 passing run."
+  },
+  "stable_engine_branch_subset": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_engine_unit.py tests/test_branch_delivery.py -q",
+    "passed": 58,
+    "failed": 0,
+    "seconds": 423.12
+  },
+  "role_store_subset": {
+    "passed": 118,
+    "failed": 0,
+    "seconds": 163.49
+  },
+  "submission_api_ui_subset": {
+    "passed": 64,
+    "failed": 0,
+    "seconds": 33.11,
+    "source": "delegated worker; includes mocked uploads and Streamlit AppTest render"
+  },
+  "adapter": {
+    "command": "node --test test/adapter.test.ts",
+    "passed": 7,
+    "failed": 0,
+    "seconds": 1.527
+  },
+  "package_resources": {
+    "wheel_build": "passed with isolated build dependencies",
+    "role_resource_count": 9
+  },
+  "git_diff_check": "passed",
+  "limitations": [
+    "Agent responses in local workflow tests are controlled fixtures, not live SDK approvals",
+    "One workflow represents one feature; no cross-workflow batch merge",
+    "No automatic remote PR, push or main merge",
+    "Production adapter remains fail-closed"
+  ]
+}

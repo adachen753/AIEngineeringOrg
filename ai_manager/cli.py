@@ -7,6 +7,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+from ai_manager.submission_file import load_submission_file
+
 
 def api_request(base_url: str, path: str, payload: dict | None = None):
     data = None if payload is None else json.dumps(payload).encode("utf-8")
@@ -26,8 +28,10 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="AI Manager API client")
     parser.add_argument("--api-url", default=os.environ.get("AIM_API_URL", "http://127.0.0.1:8765"))
     commands = parser.add_subparsers(dest="command", required=True)
-    submit = commands.add_parser("submit", help="Submit a JSON Submission file")
+    submit = commands.add_parser("submit", help="Submit a JSON or Markdown Submission file")
     submit.add_argument("file", type=Path)
+    submit.add_argument("--approved", action="store_true",
+                        help="Explicitly authorize the submitted paths and fixed test command")
     for name in ("status", "events", "artifacts", "cancel", "retry", "input", "approve"):
         command = commands.add_parser(name)
         if name == "status":
@@ -41,7 +45,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "submit":
-            payload = json.loads(args.file.read_text(encoding="utf-8-sig"))
+            payload = load_submission_file(args.file).payload(approved=args.approved)
             result = api_request(args.api_url, "/workflows", payload)
         else:
             path = "/workflows"
@@ -66,4 +70,3 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

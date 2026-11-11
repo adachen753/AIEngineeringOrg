@@ -1,4 +1,5 @@
 import json
+import hashlib
 import os
 import uuid
 from urllib.parse import quote
@@ -6,6 +7,7 @@ from urllib.parse import quote
 import streamlit as st
 
 from ai_manager.cli import api_request
+from ai_manager.submission_file import MAX_FILE_BYTES, parse_submission_file
 
 
 def main():
@@ -23,6 +25,27 @@ def main():
             return None
 
     with st.expander("提交 Feature"):
+        uploaded = st.file_uploader("上传 Submission JSON / Markdown", type=["json", "md"])
+        if uploaded is not None:
+            data = uploaded.getvalue()
+            if isinstance(data, bytes):
+                try:
+                    parsed = parse_submission_file(data, uploaded.name)
+                    st.caption(f"最大 {MAX_FILE_BYTES} 字节，UTF-8。文件中的授权不会自动生效。")
+                    st.json(parsed.payload())
+                    if parsed.description:
+                        st.caption("Markdown 块外文字仅为描述，不作为命令或需求执行。")
+                        st.text(parsed.description)
+                    digest = hashlib.sha256(data + uploaded.name.encode("utf-8")).hexdigest()
+                    file_approved = st.checkbox("明确授权上传文件的路径和固定测试命令", value=False,
+                                                key="file_approval_" + digest)
+                    if st.button("提交上传文件"):
+                        result = request("/workflows", parsed.payload(approved=file_approved))
+                        if result is not None:
+                            st.session_state["workflow_id"] = result["id"]
+                            st.success("提交已保存；未授权任务等待审批。")
+                except ValueError as exc:
+                    st.error(str(exc))
         with st.form("submit"):
             repo = st.text_input("仓库绝对路径")
             base_commit = st.text_input("Base commit")

@@ -16,7 +16,7 @@ export const capabilities = Object.freeze({
   command_network_enforced: false,
   directory_write_boundary_probe: 'passed-for-test-and-dev-fixtures',
   strict_write_scopes: false,
-  roles: { manager: 'blocked', dev: 'blocked', test: 'blocked' },
+  roles: { manager: 'blocked', dev: 'blocked', test: 'blocked', reviewer: 'blocked' },
   blocker: 'NETWORK_SANDBOX_NOT_ENFORCED: real Windows SDK Dev probe connected over raw TCP to an adapter-owned localhost listener despite networkAccessEnabled=false and sandbox_workspace_write.network_access=false. Test/Dev directory writes were bounded in fixtures, but localhost backend access can bypass those boundaries. All production dispatch remains fail-closed.',
 });
 

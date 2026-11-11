@@ -10,6 +10,7 @@ from langgraph.graph import END, START, StateGraph
 
 from .git import Worktrees, git, run_tests, snapshot, stop_owned
 from .models import AgentResult, Settings
+from .role_config import role_prompt
 from .store import Store, now
 
 
@@ -150,6 +151,7 @@ class Engine:
         self.store.save(record)
 
     async def agent(self, record, role, cwd, prompt):
+        prompt = role_prompt(record, role, prompt)
         prompt += "\nBackend repository root: " + str(cwd) + ". All allowed relative paths and pytest node IDs are relative to this repository root, even if the sandbox command cwd is a narrower authorized subdirectory."
         run_id = str(uuid4())
         task_id = record["tasks"].setdefault(role, {"id": str(uuid4()), "dependencies": []})["id"]
@@ -161,7 +163,7 @@ class Engine:
         self.checkpoint(record)
         request = {"run_id": run_id, "thread_id": record["threads"].get(role), "prompt": prompt, "cwd": str(cwd), "role": role,
                    "timeout_seconds": record["submission"]["timeout_seconds"], "output_schema": sdk_schema(),
-                   "allowed_paths": [] if role == "manager" else record["submission"]["test_paths"] if role == "test" else record["submission"]["allowed_paths"]}
+                   "allowed_paths": [] if role in {"manager", "reviewer"} else record["submission"]["test_paths"] if role == "test" else record["submission"]["allowed_paths"]}
         response = await self.client.post("/runs", json=request)
         if response.status_code >= 400:
             attempt["status"] = "failed"
@@ -253,6 +255,13 @@ class Engine:
         repo = Path(record["submission"]["repo"])
         base = git(repo, "rev-parse", "--verify", record["submission"]["base_commit"] + "^{commit}")
         record["commits"]["base"] = base
+        branch = "codex/feature/" + record["id"]
+        owned = record.get("branches", {}).get("feature")
+        if owned and (owned["name"] != branch or owned["head"] != base):
+            raise ValueError("Feature branch ownership mismatch")
+        self.worktrees.advance_branch(repo, branch, base, owned["head"] if owned else None)
+        record.setdefault("branches", {})["feature"] = {"name": branch, "head": base}
+        self.checkpoint(record)
         cwd = self.worktrees.create(repo, record["id"], "manager", base)
         record["worktrees"]["manager"] = str(cwd)
         self.checkpoint(record)
@@ -285,6 +294,7 @@ class Engine:
             raise ValueError("Dev blocked: " + result.summary)
         commit, diff = self.worktrees.commit(cwd, base, record["submission"]["allowed_paths"], "Implement authorized feature" if not repair else "Repair evidenced product bug", record["submission"]["test_paths"])
         record["commits"]["implementation"] = commit
+        self.advance_feature(record, commit)
         self.store.artifact(record["id"], f"dev-{repair}.diff", diff)
         record["stage"] = "test"
         record["tasks"].setdefault("test", {"id": str(uuid4()), "dependencies": [record["tasks"]["dev"]["id"]]})
@@ -308,6 +318,7 @@ class Engine:
         if not any(allowed_file(name, record["submission"]["test_paths"]) for name in changed):
             raise ValueError("Feature requires real new or changed tests")
         record["commits"]["candidate"] = commit
+        self.advance_feature(record, commit)
         self.store.artifact(record["id"], f"test-{repair}.diff", diff)
         self.store.artifact(record["id"], f"candidate-{repair}.diff", git(cwd, "diff", record["commits"]["base"], commit))
         record["stage"] = "verify"
@@ -338,6 +349,7 @@ class Engine:
         if evidence["polluted"] or evidence["timed_out"]:
             raise ValueError("Verification pollution or timeout; retained evidence")
         if evidence["exit_code"] == 0:
+            self.require_verified(evidence, record["commits"]["candidate"])
             mappings = record["results"]["test"].get("mappings", [])
             criteria = record["results"]["manager"]["acceptance"]
             if {item["criterion"] for item in mappings} != set(criteria):
@@ -350,7 +362,7 @@ class Engine:
             for mapping in mappings:
                 if not mapping["node_ids"] or any(executed["cases"].get(node_id) != "passed" for node_id in mapping["node_ids"]):
                     raise ValueError("Acceptance test not executed and passed: " + mapping["criterion"])
-            record["stage"] = "report"
+            record["stage"] = "review"
             return
         test_cwd = Path(record["worktrees"][f"test-{repair}"])
         before = snapshot(test_cwd)
@@ -368,18 +380,120 @@ class Engine:
         if analysis.classification == "test_issue":
             record["commits"]["implementation"] = record["commits"]["candidate"]
 
-    async def report(self, record):
+    def advance_feature(self, record, commit):
+        branch = record["branches"]["feature"]
+        self.worktrees.advance_branch(Path(record["submission"]["repo"]), branch["name"], commit, branch["head"])
+        branch["head"] = commit
+        self.checkpoint(record)
+
+    def require_verified(self, evidence, commit):
+        if not evidence or evidence.get("exit_code") != 0 or any(evidence.get(key) is not False for key in ("polluted", "timed_out", "cancelled")):
+            raise ValueError("Successful clean verification required")
+        if any(evidence.get(key) != {"head": commit, "status": ""} for key in ("before", "after")):
+            raise ValueError("Verification must execute the fixed commit")
+        executed = evidence.get("test_results", {})
+        if executed.get("collection_errors") or not executed.get("cases") or any(outcome != "passed" for outcome in executed["cases"].values()):
+            raise ValueError("Trusted passing test evidence required")
+
+    async def review(self, record):
+        commit = record["commits"]["candidate"]
+        self.require_verified(record.get("verification"), commit)
+        cwd = self.worktrees.create(Path(record["submission"]["repo"]), record["id"], "review", commit)
+        record["worktrees"]["reviewer"] = str(cwd)
+        before = snapshot(cwd)
+        self.checkpoint(record)
+        result = await self.agent(record, "reviewer", cwd,
+            "Independently review the fixed candidate read-only. No edits, commits, git writes or tests. Check correctness, safety, scope, acceptance and test quality. "
+            "Inspect the complete diff using read-only git diff " + record["commits"]["base"] + ".." + commit +
+            ". Cite the fixed candidate commit hash in evidence. This is local review, not a remote PR. "
+            "Return ready with classification none only when approved; otherwise blocked with actionable evidence. " +
+            json.dumps({"commit": commit, "base": record["commits"]["base"], "plan": record["results"]["manager"], "verification": record["verification"]}))
+        after = snapshot(cwd)
+        if after != before or result.status != "ready" or result.classification != "none" or not any(commit in item for item in result.evidence):
+            raise ValueError("Independent reviewer did not approve unchanged candidate")
+        record["review_evidence"] = {"commit": commit, "base": record["commits"]["base"], "before": before, "after": after, "result": result.model_dump()}
+        self.store.artifact(record["id"], "review.json", record["review_evidence"])
+        record["commits"]["reviewed"] = commit
+        record["stage"] = "integrate"
+
+    async def integrate(self, record):
+        commit = record["commits"]["candidate"]
+        if record["commits"].get("reviewed") != commit or record.get("review_evidence", {}).get("commit") != commit:
+            raise ValueError("Candidate lacks fixed-commit independent review")
+        self.require_verified(record.get("verification"), commit)
         cwd = Path(record["worktrees"]["manager"])
+        before = snapshot(cwd)
+        acceptance = list(record["results"]["manager"]["acceptance"])
+        result = await self.agent(record, "manager", cwd,
+            "Read-only integration decision. Approve only the independently reviewed and verified fixed candidate. Backend alone creates a workflow integration branch. "
+            "Preserve every acceptance condition. No push or main merge. Return ready, classification none and concrete evidence to authorize integration. " +
+            json.dumps({"commit": commit, "review": record["results"]["reviewer"], "verification": record["verification"], "plan": record["results"]["manager"]}))
+        if snapshot(cwd) != before or result.status != "ready" or result.classification != "none" or not result.evidence or not all(item in result.acceptance for item in acceptance):
+            raise ValueError("Manager integration approval missing")
+        repo = Path(record["submission"]["repo"])
+        feature = record["branches"]["feature"]
+        if git(repo, "rev-parse", "refs/heads/" + feature["name"]) != commit or feature["head"] != commit:
+            raise ValueError("Feature branch changed after verification")
+        git(repo, "merge-base", "--is-ancestor", record["commits"]["base"], commit)
+        branch = "codex/integration/" + record["id"]
+        self.checkpoint(record)
+        self.worktrees.advance_branch(repo, branch, commit)
+        record["branches"]["integration"] = {"name": branch, "head": commit}
+        record["commits"]["integration"] = commit
+        record["stage"] = "integration_verify"
+
+    async def integration_verify(self, record):
+        commit = record["commits"]["integration"]
+        branch = record["branches"]["integration"]
+        repo = Path(record["submission"]["repo"])
+        if git(repo, "rev-parse", "refs/heads/" + branch["name"]) != commit:
+            raise ValueError("Integration branch moved")
+        cwd = self.worktrees.create(repo, record["id"], "integration-verify", commit)
+        record["worktrees"]["integration-verify"] = str(cwd)
+        attempt = {"id": str(uuid4()), "role": "executor", "stage": "integration_verify", "status": "running", "started_at": now()}
+        record["attempts"].append(attempt)
+        self.checkpoint(record)
+        def process_started(pid):
+            attempt["pid"] = pid
+            self.checkpoint(record)
+        evidence = await run_tests(cwd, record["submission"]["timeout_seconds"], self.processes, record["id"], lambda: self.store.get(record["id"])["cancel_requested"], process_started)
+        evidence.update({"started_at": attempt["started_at"], "ended_at": now(), "commit": commit})
+        record["integration_verification"] = evidence
+        attempt.update({"status": "succeeded" if evidence["exit_code"] == 0 else "failed", "ended_at": now()})
+        self.store.artifact(record["id"], "integration-verification.json", evidence)
+        self.checkpoint(record)
+        if evidence["cancelled"]:
+            raise asyncio.CancelledError()
+        self.require_verified(evidence, commit)
+        for mapping in record["results"]["test"]["mappings"]:
+            if not mapping["node_ids"] or any(evidence["test_results"]["cases"].get(node_id) != "passed" for node_id in mapping["node_ids"]):
+                raise ValueError("Integration acceptance test not executed and passed")
+        if git(repo, "rev-parse", "refs/heads/" + branch["name"]) != commit:
+            raise ValueError("Integration branch moved during tests")
+        record["stage"] = "report"
+
+    async def report(self, record):
+        self.require_verified(record.get("integration_verification"), record["commits"]["integration"])
+        branch = record["branches"]["integration"]
+        if git(Path(record["submission"]["repo"]), "rev-parse", "refs/heads/" + branch["name"]) != record["commits"]["integration"]:
+            raise ValueError("Integration branch moved before report")
+        cwd = Path(record["worktrees"]["manager"])
+        before = snapshot(cwd)
         required_acceptance = list(record["results"]["manager"]["acceptance"])
         result = await self.agent(record, "manager", cwd,
-            "Summarize verified results using supplied immutable execution evidence. Do not claim independent Reviewer or E2E. "
+            "Summarize independent review and integration verification using supplied immutable execution evidence. Do not claim E2E. "
             "Preserve every acceptance condition. Return schema JSON, evidence mapping acceptance -> independent test reference -> actual overall command/exit. Clearly distinguish per-case mapping claims from executed evidence. " +
-            json.dumps({"acceptance": record["results"]["manager"]["acceptance"], "tests": record["results"]["test"], "verification": record["verification"], "commits": record["commits"]}))
+            json.dumps({"acceptance": record["results"]["manager"]["acceptance"], "tests": record["results"]["test"], "verification": record["verification"], "review": record["results"]["reviewer"], "integration_verification": record["integration_verification"], "branches": record["branches"], "commits": record["commits"]}))
+        if snapshot(cwd) != before:
+            raise ValueError("Manager report modified worktree")
+        if git(Path(record["submission"]["repo"]), "rev-parse", "refs/heads/" + branch["name"]) != record["commits"]["integration"]:
+            raise ValueError("Integration branch moved during report")
         if result.status != "ready" or not all(criterion in result.acceptance for criterion in required_acceptance):
             raise ValueError("Manager report blocked")
         report = {"workflow_id": record["id"], "threads": record["threads"], "commits": record["commits"], "manager_summary": result.model_dump(),
                   "acceptance_mapping": record["results"]["test"]["mappings"], "execution": record["verification"],
-                  "limitations": ["No independent code Reviewer", "No E2E/Service Fabric", "Per-case acceptance mapping is agent-provided; backend proves suite command result", "Base-commit red test not yet executed"]}
+                  "review": record["review_evidence"], "branches": record["branches"], "integration_execution": record["integration_verification"],
+                  "limitations": ["No automatic push or main merge", "No E2E/Service Fabric", "Per-case acceptance mapping is agent-provided; backend proves suite command result", "Base-commit red test not yet executed"]}
         self.store.artifact(record["id"], "report.json", report)
         record["stage"] = "done"
         record["status"] = "succeeded"

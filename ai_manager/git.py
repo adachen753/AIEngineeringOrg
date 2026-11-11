@@ -46,6 +46,16 @@ class Worktrees:
         git(repo, "worktree", "add", "--detach", str(directory), resolved_commit)
         return directory
 
+    def advance_branch(self, repo, branch, commit, expected=None):
+        git(repo, "check-ref-format", "refs/heads/" + branch)
+        if "branch refs/heads/" + branch in git(repo, "worktree", "list", "--porcelain").splitlines():
+            raise ValueError("Cannot update a checked-out workflow branch")
+        resolved = git(repo, "rev-parse", "--verify", commit + "^{commit}")
+        if expected is not None:
+            git(repo, "merge-base", "--is-ancestor", expected, resolved)
+        git(repo, "update-ref", "refs/heads/" + branch, resolved, expected or "0" * len(resolved))
+        return resolved
+
     def commit(self, cwd, base, scopes, label, test_scopes=None):
         within(cwd, self.root)
         committed = git(cwd, "diff", "--name-only", base, "HEAD").splitlines()

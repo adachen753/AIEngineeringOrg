@@ -315,11 +315,12 @@ async def test_unit_mock_success_requires_every_acceptance_mapped_to_passed_node
         args[-1](12345)
         assert store.get(record["id"])["attempts"][-1]["pid"] == 12345
         return {"exit_code": 0, "stdout": "Unit-test mocked suite exit zero",
-                "polluted": False, "timed_out": False, "cancelled": False, "test_results": results}
+                "polluted": False, "timed_out": False, "cancelled": False, "test_results": results,
+                "before": {"head": submission.base_commit, "status": ""}, "after": {"head": submission.base_commit, "status": ""}}
     monkeypatch.setattr("ai_manager.engine.run_tests", mock_runner)
     if case == "passed":
         await engine.verify(record)
-        assert record["stage"] == "report"
+        assert record["stage"] == "review"
         assert record["status"] == "running"
     else:
         with pytest.raises(ValueError):
@@ -373,8 +374,11 @@ async def test_http_unit_mock_worker_blocks_until_interrupted_attempt_reconciled
 
 
 @pytest.mark.asyncio
-async def test_unit_mock_explicit_retry_uses_new_worktree_and_retains_old_pollution(engine, store, submission, monkeypatch):
+async def test_unit_mock_explicit_retry_uses_new_worktree_and_retains_old_pollution(engine, store, submission, repo, monkeypatch):
     record = running_record(store, submission, "dev")
+    branch = "codex/feature/" + record["id"]
+    engine.worktrees.advance_branch(repo, branch, submission.base_commit)
+    record["branches"] = {"feature": {"name": branch, "head": submission.base_commit}}
     record["results"]["manager"] = agent_result().model_dump()
     record["tasks"]["dev"] = {"id": "dev-task", "dependencies": []}
     store.save(record)

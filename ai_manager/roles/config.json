@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "roles": {
+    "manager": {
+      "soul": "manager/soul.md",
+      "goal": "manager/goal.md"
+    },
+    "dev": {
+      "soul": "dev/soul.md",
+      "goal": "dev/goal.md"
+    },
+    "test": {
+      "soul": "test/soul.md",
+      "goal": "test/goal.md"
+    },
+    "reviewer": {
+      "soul": "reviewer/soul.md",
+      "goal": "reviewer/goal.md"
+    }
+  }
+}

@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from .models import Submission, TRANSITIONS
+from .role_config import load_role_config
 from .security import protect, redact, within
 
 
@@ -71,10 +72,11 @@ class Store:
                     raise ValueError("Idempotency key already used for different input")
                 return self.get(existing["id"])
             workflow_id = str(uuid4())
+            role_config = load_role_config()
             record = {"id": workflow_id, "status": "queued" if submission.authorized else "awaiting_approval", "stage": "plan", "submission": body,
                       "threads": {}, "tasks": {}, "attempts": [], "messages": [], "approvals": [{"approved": submission.authorized, "time": now()}],
                       "commits": {"base": submission.base_commit}, "worktrees": {}, "results": {}, "repair_count": 0, "retry_count": 0,
-                      "cancel_requested": False, "reason": None, "created_at": now(), "updated_at": now()}
+                      "cancel_requested": False, "reason": None, "created_at": now(), "updated_at": now(), "role_config": role_config}
             record = json.loads(redact(json.dumps(record)))
             self.db.execute("INSERT INTO workflows VALUES (?,?,?,?)", (workflow_id, submission.idempotency_key, fingerprint, json.dumps(record)))
             self._event(workflow_id, "submitted", {"status": record["status"]})

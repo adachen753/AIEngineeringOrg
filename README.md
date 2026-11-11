@@ -2,7 +2,14 @@
 
 **当前未通过完整 MVP 验收。** 后台、UI/CLI、持久化和隔离验证执行器已实现；真实 SDK 新建/续聊/重启恢复实验已成功，但 Windows 命令 sandbox 在请求禁用网络时仍能连接 localhost。为避免角色间接调用后台绕过授权，生产角色调度保持 fail-closed，不使用 mock 或宽权限冒充完成。详见 docs/verification-status.md。
 
-本地 Python Git 小项目的串行 Manager → Dev → Test → 固定提交验证 → 报告入口。FastAPI 后台拥有唯一工作流执行器；Streamlit 和 CLI 只访问同一 API、SQLite 状态和产物。关闭 UI 不会停止后台。授权、路径、状态转换和重试限制由后台验证。
+本地 Python Git 小项目的串行 Manager 计划 → feature 分支上的 Dev 实现 → Test 验收及固定提交测试 → 独立 Reviewer → Manager 接纳 → integration 分支及集成测试 → 报告入口。每次提交表示一个 feature；暂不支持一次提交多个 feature 或跨任务自动合并。FastAPI 后台拥有唯一工作流执行器和 Git 写入权限；Streamlit 和 CLI 只访问同一 API、SQLite 状态和产物。关闭 UI 不会停止后台。
+
+## 新增配置与交付
+
+- 默认角色配置：`ai_manager/roles/config.json`，关联四角色各自的 Soul/Goal Markdown。可通过 `AIM_ROLE_CONFIG` 指定自定义配置；新任务保存配置快照。详见 `docs/role-configuration.md`。
+- 任务文件模板：`templates/submission.json` 与 `templates/submission.md`。UI 支持上传文件，CLI 支持文件提交；格式详见 `docs/submission-format.md`。文件内容不能代替显式执行授权。
+- 后台拥有 feature 分支与 `codex/integration/<任务ID>`，Reviewer 只读审查；交付记录包含分支、commit、审查及集成测试证据。不自动合入 main，不自动推送或创建远程 PR。
+- 新流程仍受适配层安全预检阻断。代码路径与本地测试不代表真实 SDK 全流程已验收；之前的 `docs/evidence` 是历史实验，不是新增流程的运行证据。
 
 ## 安装与配置（PowerShell，项目根目录）
 

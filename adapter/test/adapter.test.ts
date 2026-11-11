@@ -20,7 +20,7 @@ const admitted = () => {};
 test('request validation, protected paths, schema subset and stable digest', () => {
   const cwd = fixture();
   assert.equal(validateRequest(request(cwd)).cwd, cwd);
-  for (const changes of [{ run_id: '../escape' }, { thread_id: 'not-a-uuid' }, { prompt: '' }, { timeout_seconds: 0 }, { role: 'reviewer' }, { unknown: true }, { allowed_paths: ['../escape'] }, { output_schema: { type: 'object', $ref: 'https://example.com' } }]) {
+  for (const changes of [{ run_id: '../escape' }, { thread_id: 'not-a-uuid' }, { prompt: '' }, { timeout_seconds: 0 }, { role: 'unknown' }, { unknown: true }, { allowed_paths: ['../escape'] }, { output_schema: { type: 'object', $ref: 'https://example.com' } }]) {
     assert.throws(() => validateRequest(request(cwd, changes)), ApiError);
   }
   assert.equal(protectedPath('Q:\\GraphConnectors\\cwzClaude\\notes.md'), true);

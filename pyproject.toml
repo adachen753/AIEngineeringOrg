@@ -12,6 +12,8 @@ test = ["pytest==8.3.5", "pytest-asyncio==0.26.0"]
 aim = "ai_manager.cli:main"
 [tool.setuptools.packages.find]
 include = ["ai_manager*"]
+[tool.setuptools.package-data]
+ai_manager = ["roles/*.json", "roles/*/*.md"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
