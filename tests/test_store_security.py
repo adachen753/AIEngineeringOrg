@@ -146,6 +146,23 @@ def test_submission_rejects_unsafe_scopes(submission, scope):
         Submission.model_validate({**submission.model_dump(), "allowed_paths": [scope]})
 
 
+def test_repository_scope_is_allowed_only_for_dev(submission):
+    data = {**submission.model_dump(), "allowed_paths": ["."]}
+    assert Submission.model_validate(data).allowed_paths == ["."]
+    with pytest.raises(ValidationError):
+        Submission.model_validate({**data, "test_paths": ["."]})
+
+
+@pytest.mark.parametrize("name,expected", [
+    ("README.md", True), ("new/component.cs", True), (".github/config.yml", True),
+    ("../escape", False), ("src/../escape", False), ("/escape", False),
+    ("C:/escape", False), ("Q:escape", False), (".git/config", False),
+    ("nested/.GIT/config", False), ("", False),
+])
+def test_repository_scope_preserves_path_guards(name, expected):
+    assert allowed_file(name, ["."]) is expected
+
+
 
 def test_stored_workflow_redacts_secrets_but_idempotency_compares_original_input(store, submission):
     secret_submission = submission.model_copy(update={"feature": "Use password=first-private sk-abcdefghijk"})
