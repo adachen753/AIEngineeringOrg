@@ -1,9 +1,18 @@
 {
   "version": 1,
+  "context": "graphconnectors.md",
   "roles": {
     "manager": {
       "soul": "manager/soul.md",
       "goal": "manager/goal.md"
+    },
+    "architect": {
+      "soul": "architect/soul.md",
+      "goal": "architect/goal.md"
+    },
+    "feature_designer": {
+      "soul": "feature_designer/soul.md",
+      "goal": "feature_designer/goal.md"
     },
     "dev": {
       "soul": "dev/soul.md",
@@ -16,6 +25,34 @@
     "reviewer": {
       "soul": "reviewer/soul.md",
       "goal": "reviewer/goal.md"
+    },
+    "security": {
+      "soul": "security/soul.md",
+      "goal": "security/goal.md"
+    },
+    "integration": {
+      "soul": "integration/soul.md",
+      "goal": "integration/goal.md"
+    },
+    "release": {
+      "soul": "release/soul.md",
+      "goal": "release/goal.md"
+    },
+    "knowledge_curator": {
+      "soul": "knowledge_curator/soul.md",
+      "goal": "knowledge_curator/goal.md"
+    },
+    "backend_architect": {
+      "soul": "backend_architect/soul.md",
+      "goal": "backend_architect/goal.md"
+    },
+    "bugfix": {
+      "soul": "bugfix/soul.md",
+      "goal": "bugfix/goal.md"
+    },
+    "scenario_tester": {
+      "soul": "scenario_tester/soul.md",
+      "goal": "scenario_tester/goal.md"
     }
   }
 }

@@ -1,11 +1,13 @@
 param(
     [switch]$UI,
+    [switch]$DesktopBridge,
     [string]$Python = '',
     [string]$Node = 'node',
     [string]$AdapterEntry = 'adapter/src/server.ts',
     [int]$ApiPort = 8765,
     [int]$AdapterPort = 8766,
     [int]$UiPort = 8501,
+    [int]$BridgePort = 8767,
     [string]$DataDir = '.aim-data'
 )
 $ErrorActionPreference = 'Stop'
@@ -18,7 +20,8 @@ $pythonExe = (Get-Command $Python -ErrorAction Stop).Source
 $nodeExe = (Get-Command $Node -ErrorAction Stop).Source
 $entry = [IO.Path]::GetFullPath((Join-Path $root $AdapterEntry))
 if (-not (Test-Path -LiteralPath $entry -PathType Leaf)) { throw "Adapter entry missing: $entry. Install adapter sources or pass -AdapterEntry." }
-foreach ($port in @($ApiPort, $AdapterPort) + $(if ($UI) { @($UiPort) } else { @() })) {
+if ($DesktopBridge -and (-not $env:AIM_BRIDGE_CONFIG -or $env:AIM_DESKTOP_BRIDGE_TOKEN.Length -lt 32)) { throw 'DesktopBridge requires AIM_BRIDGE_CONFIG and a token of at least 32 characters.' }
+foreach ($port in @($ApiPort, $AdapterPort) + $(if ($UI) { @($UiPort) } else { @() }) + $(if ($DesktopBridge) { @($BridgePort) } else { @() })) {
     if (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue) { throw "Port $port already occupied; no existing process will be killed." }
 }
 New-Item -ItemType Directory -Path $stateDir -Force | Out-Null
@@ -36,13 +39,17 @@ function Start-Owned([string]$name, [string]$executable, [string[]]$arguments) {
     $owned.Add([pscustomobject]@{ name = $name; pid = $process.Id; started = $process.StartTime.ToUniversalTime().Ticks.ToString(); executable = $executable; adapter_data = $(if ($name -eq 'adapter') { $env:AIM_ADAPTER_DATA } else { $null }) })
     ConvertTo-Json -InputObject @($owned.ToArray()) | Set-Content -LiteralPath $stateFile -Encoding utf8
 }
-function Wait-Healthy([string]$url) {
+function Wait-Healthy([string]$url, [hashtable]$headers = @{}) {
     for ($attempt = 0; $attempt -lt 60; $attempt++) {
-        try { Invoke-RestMethod -Uri $url -TimeoutSec 2 | Out-Null; return } catch { Start-Sleep -Milliseconds 500 }
+        try { Invoke-RestMethod -Uri $url -Headers $headers -TimeoutSec 2 | Out-Null; return } catch { Start-Sleep -Milliseconds 500 }
     }
     throw "Health check failed: $url. Inspect $stateDir logs."
 }
 try {
+    if ($DesktopBridge) {
+        Start-Owned 'desktop-bridge' $pythonExe @('-m', 'uvicorn', 'ai_manager.desktop_bridge:app', '--host', '127.0.0.1', '--port', "$BridgePort", '--workers', '1')
+        Wait-Healthy "http://127.0.0.1:$BridgePort/health" @{ Authorization = "Bearer $env:AIM_DESKTOP_BRIDGE_TOKEN" }
+    }
     Start-Owned 'adapter' $nodeExe @(('"' + $entry + '"'))
     Wait-Healthy "$env:AIM_ADAPTER_URL/health"
     Start-Owned 'backend' $pythonExe @('-m', 'uvicorn', 'ai_manager.api:app', '--host', '127.0.0.1', '--port', "$ApiPort", '--workers', '1')

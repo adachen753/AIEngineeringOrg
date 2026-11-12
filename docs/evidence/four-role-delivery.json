@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-12",
+  "production_status": "BLOCKED_NOT_LIVE_VERIFIED",
+  "implementation": "Manager -> Architect -> Dev -> Build/Fix -> Tester -> Deploy/E2E -> Manager",
+  "defaults": {
+    "max_fix_rounds": 5,
+    "total_timeout_seconds": 7200
+  },
+  "verification": [
+    {
+      "command": "python -m pytest tests/test_role_config.py tests/test_submission_files.py tests/test_engine_unit.py -q",
+      "result": "109 passed"
+    },
+    {
+      "command": "python -m pytest tests/test_api_clients.py tests/test_store_security.py tests/test_role_config.py tests/test_submission_files.py -q",
+      "result": "193 passed; one existing anyio deprecation warning; overlaps previous command"
+    },
+    {
+      "command": "node --test test/*.test.ts (adapter)",
+      "result": "7 passed; production still rejects dispatch"
+    },
+    {
+      "command": "python acceptance/four_role_delivery_smoke.py",
+      "result": "Synthetic integration passed: compiler-error repair, Tester-to-Dev repair, zero repair limit, environment blocked without repair, persisted deadline, unauthenticated bridge rejection",
+      "real_components": [
+        "temporary Git worktrees and commits",
+        "build subprocess",
+        "authenticated localhost HTTP bridge",
+        "approved driver subprocess"
+      ],
+      "simulated_components": [
+        "Agent responses",
+        "compiler behavior",
+        "SF deployment",
+        "Computer-use UI and SQL observations"
+      ]
+    },
+    {
+      "command": "Expired-workflow targeted validation",
+      "result": "Rejected before coroutine creation; runtime warning fixed"
+    }
+  ],
+  "not_performed": [
+    "live Codex dispatch",
+    "actual GraphConnectors MSBuild",
+    "actual Service Fabric deployment",
+    "actual Computer-use or SSMS queries",
+    "new product unit tests",
+    "independent Reviewer stage",
+    "git commit/push",
+    "service restart"
+  ],
+  "required_next_steps": [
+    "Resolve and independently verify the SDK execution boundary without disabling fail-closed",
+    "Approve and configure a concrete GraphConnectors project/build/package profile",
+    "Provide and validate the dedicated SF deployment driver",
+    "Provide and validate a real Computer-use driver and SQL/UI acceptance scenario"
+  ]
+}

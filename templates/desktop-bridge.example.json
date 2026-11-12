@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "enabled": false,
+  "data_dir": "Q:/AIManager/.aim-data/desktop-bridge",
+  "artifact_root": "Q:/AIManager/.aim-data/worktrees",
+  "resources": {
+    "REPLACE_DEDICATED_LOCAL_SF_APPLICATION": {
+      "recipe": "REPLACE_APPROVED_RECIPE",
+      "scenario": "REPLACE_UI_AND_DATABASE_SCENARIO",
+      "checks": [
+        "service_healthy",
+        "ui_expected_state",
+        "database_expected_values"
+      ],
+      "deploy_command": [
+        "C:/Program Files/PowerShell/7/pwsh.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "C:/AIManagerOperator/deploy-owned-application.ps1"
+      ],
+      "e2e_command": [
+        "C:/REPLACE/node.exe",
+        "C:/AIManagerOperator/computer-use-scenario.mjs"
+      ]
+    }
+  }
+}

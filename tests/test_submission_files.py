@@ -136,11 +136,14 @@ def test_ui_invalid_upload_does_not_submit(monkeypatch):
 
 
 @pytest.mark.parametrize("approved", [False, True])
-def test_ui_upload_preview_and_authorization(body, monkeypatch, approved):
+def test_ui_feature_upload_authorization(body, monkeypatch, approved):
     from ai_manager import ui
     streamlit = MagicMock()
     streamlit.file_uploader.return_value.name = "file.md"
-    streamlit.file_uploader.return_value.getvalue.return_value = markdown(body)
+    streamlit.file_uploader.return_value.getvalue.return_value = markdown({
+        "project": "graphconnectors", "feature": body["feature"],
+        "idempotency_key": "feature-upload", "authorized": True, "deploy_authorized": True,
+    })
     streamlit.form_submit_button.return_value = False
     streamlit.button.side_effect = lambda label, **kwargs: label == "提交上传文件"
     streamlit.checkbox.return_value = approved
@@ -151,10 +154,38 @@ def test_ui_upload_preview_and_authorization(body, monkeypatch, approved):
     monkeypatch.setattr(ui, "api_request", request)
     ui.main()
     assert request.call_args_list[0].args[2]["authorized"] is approved
-    assert streamlit.json.call_args.args[0]["authorized"] is False
+    assert request.call_args_list[0].args[1] == "/features"
+    assert request.call_args_list[0].args[2]["deploy_authorized"] is approved
     streamlit.text.assert_called_once()
     assert streamlit.checkbox.call_args_list[0].kwargs["value"] is False
     assert streamlit.checkbox.call_args_list[0].kwargs["key"].startswith("file_approval_")
+
+
+@pytest.mark.parametrize("reload_file", [False, True])
+def test_ui_workflow_upload_populates_draft_without_submitting(body, monkeypatch, reload_file):
+    from ai_manager import ui
+    streamlit = MagicMock()
+    streamlit.file_uploader.return_value.name = "file.md"
+    data = markdown(body)
+    streamlit.file_uploader.return_value.getvalue.return_value = data
+    streamlit.form_submit_button.return_value = False
+    streamlit.button.side_effect = lambda label, **kwargs: reload_file and label == "重新填入文件内容"
+    streamlit.text_input.side_effect = lambda label, *args, **kwargs: "" if label.startswith("Workflow ID") else "value"
+    streamlit.session_state.get.return_value = None
+    request = MagicMock(return_value=[])
+    monkeypatch.setattr(ui, "st", streamlit)
+    monkeypatch.setattr(ui, "api_request", request)
+    ui.main()
+    draft = streamlit.session_state.update.call_args.args[0]
+    assert draft["draft_repo"] == body["repo"]
+    assert draft["draft_feature"] == body["feature"]
+    assert draft["draft_allowed"] == "\n".join(body["allowed_paths"])
+    assert draft["draft_authorized"] is False
+    assert all(call.args[1] == "/workflows" and call.args[2] is None for call in request.call_args_list)
+    streamlit.session_state.update.reset_mock()
+    streamlit.session_state.get.return_value = draft["loaded_submission_digest"]
+    ui.main()
+    assert streamlit.session_state.update.called is reload_file
 
 
 def test_templates_are_valid_and_not_authorized():

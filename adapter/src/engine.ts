@@ -18,6 +18,7 @@ export class SdkEngine {
   threads = new Map<string, Thread>();
   constructor() {
     this.codex = new Codex({
+      env: Object.fromEntries(Object.entries(process.env).filter(([key, value]) => value !== undefined && !['AIM_DESKTOP_BRIDGE_TOKEN', 'AIM_PROJECT_CONFIG', 'AIM_BRIDGE_CONFIG'].includes(key))) as Record<string, string>,
       codexPathOverride: resolveCodex(),
       config: {
         approval_policy: 'never',
@@ -28,7 +29,7 @@ export class SdkEngine {
   }
 
   async run(request: RunRequest, signal: AbortSignal, onEvent: (event: ThreadEvent) => void): Promise<unknown> {
-    const readOnly = request.role === 'manager' || request.role === 'reviewer';
+    const readOnly = request.role === 'manager' || request.role === 'architect' || request.role === 'reviewer' || (request.role === 'test' && !request.allowed_paths?.length && !request.test_paths?.length);
     const roots = (request.role === 'test' ? request.test_paths ?? request.allowed_paths : request.allowed_paths)?.map(directory => canonicalDirectory(path.resolve(request.cwd, directory))) ?? [];
     if (roots.some(directory => !within(request.cwd, directory))) throw new Error('INVALID_SCOPE');
     const options = {

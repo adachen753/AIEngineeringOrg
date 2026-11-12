@@ -32,6 +32,8 @@ def main(argv=None) -> int:
     submit.add_argument("file", type=Path)
     submit.add_argument("--approved", action="store_true",
                         help="Explicitly authorize the submitted paths and fixed test command")
+    submit.add_argument("--deploy-approved", action="store_true",
+                        help="Explicitly authorize the configured dedicated local deployment and E2E")
     for name in ("status", "events", "artifacts", "cancel", "retry", "input", "approve"):
         command = commands.add_parser(name)
         if name == "status":
@@ -45,8 +47,13 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "submit":
-            payload = load_submission_file(args.file).payload(approved=args.approved)
-            result = api_request(args.api_url, "/workflows", payload)
+            parsed = load_submission_file(args.file)
+            payload = parsed.payload(approved=args.approved)
+            if args.deploy_approved:
+                if parsed.endpoint != "/features":
+                    raise ValueError("--deploy-approved requires a project Feature request")
+                payload["deploy_authorized"] = True
+            result = api_request(args.api_url, parsed.endpoint, payload)
         else:
             path = "/workflows"
             if args.id:

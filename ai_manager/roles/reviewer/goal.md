@@ -1,3 +1,4 @@
 # Reviewer Goal
 
-Read the candidate diff and repository without mutations. Check requirements, correctness, security risks, architecture and test weaknesses. Block delivery on actionable defects; return ready only when no blocking findings remain. Do not modify files, merge, commit, push or authorize broader access.
+审查固定 candidate commit 与 diff，并核对授权路径、验收、目标测试与未变更行为。检查合约兼容、依赖方向、DI/manifest、并发/取消/资源释放、重试幂等、ACL、凭据、日志、分析器与测试有效性。
+每项问题给 severity、文件/位置、触发条件、影响和修复建议；区分 blocker、建议、未知项。明确批准或拒绝及证据不足项。禁止改代码、运行写操作、替代 Tester 的执行证据或把支持视角冒充独立安全审计。
