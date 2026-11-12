@@ -21,7 +21,7 @@ Adapters can call `parse_submission_file(data, filename)` with bytes or a Python
 
 File `authorized: true` never authorizes execution. CLI submission defaults to `authorized: false`; only the explicit `aim submit submission.md --approved` flag authorizes that submission. Alternatively, later use `aim approve WORKFLOW_ID --approved`.
 
-In the frontend, upload a JSON/Markdown file, inspect the validated JSON preview and optional description, then click Submit uploaded file. The separate authorization checkbox starts unchecked and is keyed to file name/content, so changing the upload does not carry authorization to a different file. Unchecked submissions wait for approval. The existing manual-entry form remains available.
+In the frontend, uploading a valid JSON/Markdown file fills the editable submission form; uploading does not create a workflow. Review or edit the fields, select the authorization checkbox if appropriate, then click Submit. Authorization always starts unchecked for a newly loaded file. Edits survive reruns; use the reload-file button to restore the file values. Markdown prose remains an inert description. The manual-entry form remains available.
 
 ## Templates
 

@@ -32,32 +32,41 @@ def main():
                 try:
                     parsed = parse_submission_file(data, uploaded.name)
                     st.caption(f"最大 {MAX_FILE_BYTES} 字节，UTF-8。文件中的授权不会自动生效。")
-                    st.json(parsed.payload())
                     if parsed.description:
                         st.caption("Markdown 块外文字仅为描述，不作为命令或需求执行。")
                         st.text(parsed.description)
                     digest = hashlib.sha256(data + uploaded.name.encode("utf-8")).hexdigest()
-                    file_approved = st.checkbox("明确授权上传文件的路径和固定测试命令", value=False,
-                                                key="file_approval_" + digest)
-                    if st.button("提交上传文件"):
-                        result = request("/workflows", parsed.payload(approved=file_approved))
-                        if result is not None:
-                            st.session_state["workflow_id"] = result["id"]
-                            st.success("提交已保存；未授权任务等待审批。")
+                    reload_file = st.button("重新填入文件内容")
+                    if st.session_state.get("loaded_submission_digest") != digest or reload_file:
+                        submission = parsed.submission
+                        st.session_state.update({
+                            "draft_repo": submission.repo,
+                            "draft_base_commit": submission.base_commit,
+                            "draft_feature": submission.feature,
+                            "draft_allowed": "\n".join(submission.allowed_paths),
+                            "draft_tests": "\n".join(submission.test_paths),
+                            "draft_acceptance": "\n".join(submission.acceptance),
+                            "draft_command": json.dumps(submission.test_command, ensure_ascii=False),
+                            "draft_timeout": submission.timeout_seconds,
+                            "draft_authorized": False,
+                            "draft_key": submission.idempotency_key,
+                            "loaded_submission_digest": digest,
+                        })
+                    st.success("文件已载入下方表单，可修改后点击“提交”；上传本身不会创建后台任务。")
                 except ValueError as exc:
                     st.error(str(exc))
         with st.form("submit"):
-            repo = st.text_input("仓库绝对路径")
-            base_commit = st.text_input("Base commit")
-            feature = st.text_area("Feature / Manager 需求")
-            allowed = st.text_area("允许修改路径（每行一个）")
-            tests = st.text_area("授权测试路径（每行一个）")
-            acceptance = st.text_area("验收条件（每行一个）")
+            repo = st.text_input("仓库绝对路径", key="draft_repo")
+            base_commit = st.text_input("Base commit", key="draft_base_commit")
+            feature = st.text_area("Feature / Manager 需求", key="draft_feature")
+            allowed = st.text_area("允许修改路径（每行一个）", key="draft_allowed")
+            tests = st.text_area("授权测试路径（每行一个）", key="draft_tests")
+            acceptance = st.text_area("验收条件（每行一个）", key="draft_acceptance")
             command = st.text_input("测试命令（JSON 参数数组）",
-                                    '["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]')
-            timeout = st.number_input("超时秒数", min_value=10, max_value=3600, value=300)
-            authorized = st.checkbox("授权在隔离 worktree 内修改上述范围并执行指定测试", value=False)
-            key = st.text_input("提交幂等键（网络失败后保留同一键）", st.session_state.submission_key)
+                                    '["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]', key="draft_command")
+            timeout = st.number_input("超时秒数", min_value=10, max_value=3600, value=300, key="draft_timeout")
+            authorized = st.checkbox("授权在隔离 worktree 内修改上述范围并执行指定测试", value=False, key="draft_authorized")
+            key = st.text_input("提交幂等键（网络失败后保留同一键）", st.session_state.submission_key, key="draft_key")
             submitted = st.form_submit_button("提交")
         if submitted:
             try:
