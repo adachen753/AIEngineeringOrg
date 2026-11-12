@@ -24,6 +24,19 @@ def test_real_worktree_uses_fixed_revision_not_dirty_source(repo, tmp_path):
     assert (cwd / "pollution.txt").read_text(encoding="utf-8") == "retained"
 
 
+def test_real_commit_accepts_repository_scope(repo, tmp_path):
+    trees = Worktrees(tmp_path / "worktrees")
+    base = git(repo, "rev-parse", "HEAD")
+    cwd = trees.create(repo, "workflow", "dev", base)
+    (cwd / "new-top-level.txt").write_text("feature", encoding="utf-8")
+    (cwd / ".feature-config").write_text("config", encoding="utf-8")
+    commit, _ = trees.commit(cwd, base, ["."], "Repository-wide feature")
+    assert commit != base
+    assert git(cwd, "show", commit + ":new-top-level.txt") == "feature"
+    assert git(cwd, "show", commit + ":.feature-config") == "config"
+    assert snapshot(cwd) == {"head": commit, "status": ""}
+
+
 def test_real_commit_rejects_out_of_scope_without_staging(repo, tmp_path):
     trees = Worktrees(tmp_path / "worktrees")
     base = git(repo, "rev-parse", "HEAD")

@@ -17,6 +17,8 @@ Adapters can call `parse_submission_file(data, filename)` with bytes or a Python
 
 ## Authorization
 
+`allowed_paths: ["."]` authorizes repository-wide source changes inside the isolated worktree, including hidden files and newly created top-level paths. It does not authorize paths outside that worktree, Git metadata, protected user directories, external resources or deployment. Use explicit relative paths to restrict scope. `test_paths` separately limits files the Tester can modify; it is not a test-discovery list or a command. It still requires explicit relative paths and does not accept `.`.
+
 File `authorized: true` never authorizes execution. CLI submission defaults to `authorized: false`; only the explicit `aim submit submission.md --approved` flag authorizes that submission. Alternatively, later use `aim approve WORKFLOW_ID --approved`.
 
 In the frontend, upload a JSON/Markdown file, inspect the validated JSON preview and optional description, then click Submit uploaded file. The separate authorization checkbox starts unchecked and is keyed to file name/content, so changing the upload does not carry authorization to a different file. Unchecked submissions wait for approval. The existing manual-entry form remains available.

@@ -25,6 +25,6 @@ def redact(value: str) -> str:
 
 def allowed_file(name: str, scopes: list[str]) -> bool:
     candidate = name.replace("\\", "/")
-    if candidate.startswith("/") or ".." in candidate.split("/") or ".git" in candidate.split("/"):
+    if not candidate or ":" in candidate or candidate.startswith("/") or ".." in candidate.split("/") or ".git" in candidate.casefold().split("/"):
         return False
-    return any(candidate == scope.rstrip("/") or candidate.startswith(scope.rstrip("/") + "/") for scope in scopes)
+    return any(scope == "." or candidate == scope.rstrip("/") or candidate.startswith(scope.rstrip("/") + "/") for scope in scopes)

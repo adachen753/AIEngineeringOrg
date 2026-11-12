@@ -21,8 +21,10 @@ class Submission(BaseModel):
 
     @field_validator("allowed_paths", "test_paths")
     @classmethod
-    def safe_scopes(cls, scopes):
+    def safe_scopes(cls, scopes, info):
         for scope in scopes:
+            if scope == "." and info.field_name == "allowed_paths":
+                continue
             path = Path(scope)
             if not scope or path.is_absolute() or scope.startswith("/") or ".." in path.parts or ":" in scope or "\\" in scope or scope.startswith("."):
                 raise ValueError("Scopes must be explicit relative file/directory paths")
