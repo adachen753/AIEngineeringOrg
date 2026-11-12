@@ -6,8 +6,21 @@ class Settings(BaseModel):
     data_dir: Path = Path(".aim-data")
     adapter_url: str = "http://127.0.0.1:8766"
 
+class AgentSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provider: Literal["codex", "copilot"] = "codex"
+    model: str | None = Field(default=None, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$")
+    effort: Literal["minimal", "low", "medium", "high", "xhigh", "max", "ultra", "persistent"] | None = None
+
+    @model_validator(mode="after")
+    def supported_options(self):
+        if self.provider == "copilot" and self.effort is not None:
+            raise ValueError("Copilot ACP effort selection is not verified; omit effort")
+        return self
+
 class Submission(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    role_models: dict[Literal["manager", "architect", "dev", "test", "reviewer"], AgentSelection] = Field(default_factory=dict)
     repo: str
     base_commit: str = Field(pattern=r"^[0-9a-fA-F]{40,64}$")
     feature: str = Field(min_length=1, max_length=12000)
@@ -52,6 +65,7 @@ class Submission(BaseModel):
 
 class FeatureRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
+    role_models: dict[Literal["manager", "architect", "dev", "test", "reviewer"], AgentSelection] = Field(default_factory=dict)
     project: str = Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")
     feature: str = Field(min_length=1, max_length=12000)
     idempotency_key: str = Field(min_length=1, max_length=200)

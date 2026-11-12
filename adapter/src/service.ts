@@ -3,6 +3,7 @@ import { digest, validateRequest } from './request.ts';
 import type { RunRequest } from './request.ts';
 import { publicEvent, sanitize } from './privacy.ts';
 import { SdkEngine } from './engine.ts';
+import { CopilotEngine } from './copilot.ts';
 import { RunStore } from './store.ts';
 import type { RunRecord } from './store.ts';
 
@@ -15,10 +16,10 @@ export function response(record: RunRecord): any {
 
 export class RunService {
   store: RunStore;
-  engineFactory: () => Engine;
-  admission: () => void;
+  engineFactory: (request: RunRequest) => Engine;
+  admission: (request?: RunRequest) => void;
   active?: Active;
-  constructor(store: RunStore, engineFactory: () => Engine = () => new SdkEngine(), admission = requireEnforcedScope) {
+  constructor(store: RunStore, engineFactory: (request: RunRequest) => Engine = request => request.provider === 'copilot' ? new CopilotEngine() : new SdkEngine(), admission = requireEnforcedScope) {
     this.store = store;
     this.engineFactory = engineFactory;
     this.admission = admission;
@@ -39,14 +40,14 @@ export class RunService {
       return { code: 200, record: existing };
     }
     if (this.active) throw new ApiError(409, 'One run at a time');
-    const binding = digest({ cwd: request.cwd, role: request.role, allowed_paths: request.allowed_paths ?? [], test_paths: request.test_paths ?? [] });
+    const binding = digest({ cwd: request.cwd, role: request.role, allowed_paths: request.allowed_paths ?? [], test_paths: request.test_paths ?? [], ...(request.provider || request.model || request.effort ? { provider: request.provider ?? 'codex', model: request.model ?? null, effort: request.effort ?? null } : {}) });
     if (request.thread_id) {
       const history = [...this.store.records.values()].filter(record => record.thread_id === request.thread_id);
       if (!history.length || history.some(record => record.binding !== binding)) throw new ApiError(409, 'Unknown thread or role/cwd/write-scope mismatch');
       if (history.some(record => record.status === 'interrupted')) throw new ApiError(409, 'Ambiguous interrupted thread requires operator reconciliation, not automatic replay');
     }
     const record: RunRecord = { run_id: request.run_id, thread_id: request.thread_id, status: 'running', result: null, events: [], fingerprint, binding };
-    try { this.admission(); } catch (error) {
+    try { this.admission(request); } catch (error) {
       record.status = 'failed';
       record.error = error instanceof ApiError ? error.message : 'SCOPE_ADMISSION_FAILED';
       this.store.save(record);
@@ -62,7 +63,7 @@ export class RunService {
   private async execute(request: RunRequest, active: Active): Promise<void> {
     const timer = setTimeout(() => { active.reason ??= 'timeout'; active.controller.abort(); }, request.timeout_seconds * 1000);
     try {
-      const result = await this.engineFactory().run(request, active.controller.signal, event => {
+      const result = await this.engineFactory(request).run(request, active.controller.signal, event => {
         if (event.type === 'thread.started') {
           if (active.record.thread_id && active.record.thread_id !== event.thread_id) throw new Error('THREAD_ID_MISMATCH');
           active.record.thread_id = event.thread_id;

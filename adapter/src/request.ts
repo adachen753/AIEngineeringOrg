@@ -12,6 +12,9 @@ export type RunRequest = {
   output_schema?: Record<string, unknown>;
   allowed_paths?: string[];
   test_paths?: string[];
+  provider?: 'codex' | 'copilot';
+  model?: string;
+  effort?: 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'ultra' | 'persistent';
 };
 
 export const runIdPattern = /^[A-Za-z0-9_-]{1,128}$/;
@@ -19,7 +22,11 @@ const threadIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-
 
 export function validateRequest(input: any): RunRequest {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new ApiError(400, 'Expected JSON object');
-  const keys = ['run_id', 'thread_id', 'prompt', 'cwd', 'role', 'timeout_seconds', 'output_schema', 'allowed_paths', 'test_paths'];
+  const keys = ['run_id', 'thread_id', 'prompt', 'cwd', 'role', 'timeout_seconds', 'output_schema', 'allowed_paths', 'test_paths', 'provider', 'model', 'effort'];
+  if (input.provider !== undefined && !['codex', 'copilot'].includes(input.provider)) throw new ApiError(400, 'Unknown provider');
+  if (input.model !== undefined && (typeof input.model !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/.test(input.model))) throw new ApiError(400, 'Invalid model');
+  if (input.effort !== undefined && !['minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra', 'persistent'].includes(input.effort)) throw new ApiError(400, 'Invalid effort');
+  if (input.provider === 'copilot' && input.effort) throw new ApiError(400, 'Copilot ACP does not expose a verified effort setter');
   if (Object.keys(input).some(key => !keys.includes(key))) throw new ApiError(400, 'Unknown request field');
   if (typeof input.run_id !== 'string' || !runIdPattern.test(input.run_id)) throw new ApiError(400, 'Invalid run_id');
   if (input.thread_id !== null && (typeof input.thread_id !== 'string' || !threadIdPattern.test(input.thread_id))) throw new ApiError(400, 'Invalid thread_id');

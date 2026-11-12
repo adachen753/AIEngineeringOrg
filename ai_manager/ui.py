@@ -7,6 +7,7 @@ from urllib.parse import quote
 import streamlit as st
 
 from ai_manager.cli import api_request
+from ai_manager.model_ui import model_settings
 from ai_manager.submission_file import MAX_FILE_BYTES, parse_submission_file
 
 
@@ -24,6 +25,8 @@ def main():
             st.error(str(exc))
             return None
 
+
+    role_models = model_settings(request)
 
     with st.expander("提交 Feature"):
         uploaded = st.file_uploader("上传 Submission JSON / Markdown", type=["json", "md"])
@@ -53,6 +56,7 @@ def main():
                                 "draft_authorized": False,
                                 "draft_key": submission.idempotency_key,
                                 "loaded_submission_digest": digest,
+                                "draft_role_models": submission.model_dump().get("role_models", {}),
                             })
                         st.success("文件已载入下方表单，可修改后点击“提交”；上传本身不会创建后台任务。")
                     else:
@@ -64,6 +68,8 @@ def main():
                                                               key="file_deploy_approval_" + digest)
                         if st.button("提交上传文件"):
                             payload = parsed.payload(approved=file_approved)
+                            if role_models:
+                                payload["role_models"] = role_models
                             if parsed.endpoint == "/features":
                                 payload["deploy_authorized"] = file_deploy_approved
                             result = request(parsed.endpoint, payload)
@@ -96,6 +102,7 @@ def main():
 
                 result = request("/workflows", {
                     "repo": repo, "base_commit": base_commit, "feature": feature,
+                    "role_models": role_models or st.session_state.get("draft_role_models", {}),
                     "allowed_paths": lines(allowed), "test_paths": lines(tests),
                     "acceptance": lines(acceptance), "test_command": test_command,
                     "idempotency_key": key, "authorized": authorized, "timeout_seconds": int(timeout),
@@ -118,7 +125,7 @@ def main():
             deployment_authorized = st.checkbox("明确授权项目配置中的专用本地 SF 部署和只读数据库/UI 验证", value=False)
             delivery_submitted = st.form_submit_button("交给 Manager 自动交付")
         if delivery_submitted:
-            result = request("/features", {"project": project, "feature": delivery_feature,
+            result = request("/features", {"project": project, "feature": delivery_feature, "role_models": role_models,
                 "idempotency_key": delivery_key, "authorized": delivery_authorized,
                 "deploy_authorized": deployment_authorized, "max_fix_rounds": int(max_rounds),
                 "total_timeout_seconds": int(total_seconds)})

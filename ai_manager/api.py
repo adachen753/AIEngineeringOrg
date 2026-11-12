@@ -1,5 +1,6 @@
 import asyncio
 import os
+import httpx
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -9,6 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from ai_manager.engine import Engine
 from ai_manager.models import FeatureRequest, Settings, Submission
+from ai_manager.models import AgentSelection
 from ai_manager.store import Store
 
 
@@ -69,6 +71,40 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/workflows")
     def workflows():
         return invoke(app.state.store.list)
+
+    async def adapter_request(path, payload=None):
+        try:
+            async with httpx.AsyncClient(base_url=settings.adapter_url, timeout=22) as client:
+                response = await client.get(path) if payload is None else await client.post(path, json=payload)
+                if response.status_code >= 400:
+                    raise HTTPException(response.status_code, response.json())
+                return response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            raise HTTPException(503, "Model adapter unavailable; inspect adapter logs") from exc
+
+    @app.get("/models/providers")
+    async def model_providers():
+        return await adapter_request("/providers")
+
+    @app.post("/models/catalog")
+    async def model_catalog(selection: AgentSelection):
+        return await adapter_request("/model-catalog", {"provider": selection.provider})
+
+    @app.post("/models/probes", status_code=202)
+    async def model_probe(payload: dict = Body(...)):
+        if set(payload) - {"provider", "model", "effort", "approved"} or payload.get("approved") is not True:
+            raise HTTPException(400, "Explicit connection-probe approval required")
+        try:
+            selection = AgentSelection.model_validate({key: value for key, value in payload.items() if key != "approved"})
+        except ValueError as exc:
+            raise HTTPException(400, "Invalid provider/model/effort") from exc
+        return await adapter_request("/model-probes", selection.model_dump(exclude_none=True) | {"approved": True})
+
+    @app.get("/models/probes/{probe_id}")
+    async def model_probe_result(probe_id: str):
+        if len(probe_id) != 36 or any(character not in "0123456789abcdef-" for character in probe_id):
+            raise HTTPException(400, "Invalid probe ID")
+        return await adapter_request("/model-probes/" + probe_id)
 
     @app.post("/workflows", status_code=201)
     def submit(submission: Submission):

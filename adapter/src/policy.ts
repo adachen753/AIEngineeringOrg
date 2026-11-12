@@ -55,6 +55,7 @@ export function within(root: string, candidate: string): boolean {
   return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
 }
 
-export function requireEnforcedScope(): void {
+export function requireEnforcedScope(request?: { provider?: string }): void {
+  if (request?.provider === 'copilot') throw new ApiError(503, 'COPILOT_EXECUTION_BOUNDARY_NOT_VERIFIED: production tool dispatch is blocked; fixed model connectivity probes do not authorize coding tools.');
   throw new ApiError(503, capabilities.blocker);
 }

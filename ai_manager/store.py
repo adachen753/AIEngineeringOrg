@@ -64,7 +64,8 @@ class Store:
             raise ValueError("Target must be a dedicated Git repository")
         body = submission.model_dump()
         body["repo"] = str(repo)
-        fingerprint = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
+        fingerprint_body = {key: value for key, value in body.items() if key != "role_models" or value}
+        fingerprint = hashlib.sha256(json.dumps(fingerprint_body, sort_keys=True).encode()).hexdigest()
         with self.lock, self.db:
             existing = self.db.execute("SELECT id,fingerprint FROM workflows WHERE idem=?", (submission.idempotency_key,)).fetchone()
             if existing:
@@ -106,7 +107,9 @@ class Store:
             existing = next((record for record in self.list()
                              if record["submission"]["idempotency_key"] == request.idempotency_key), None)
             if existing:
-                if existing.get("feature_request") != request.model_dump():
+                previous = dict(existing.get("feature_request") or {})
+                previous.setdefault("role_models", {})
+                if previous != request.model_dump():
                     raise ValueError("Idempotency key already used for different feature input")
                 return existing
             record = self.submit(feature_submission(request))

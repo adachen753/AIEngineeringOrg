@@ -1,0 +1,15 @@
+{
+  "project": "graphconnectors",
+  "feature": "REPLACE_WITH_FEATURE_AND_ACCEPTANCE",
+  "idempotency_key": "REPLACE_WITH_UNIQUE_KEY",
+  "authorized": false,
+  "deploy_authorized": false,
+  "max_fix_rounds": 5,
+  "total_timeout_seconds": 7200,
+  "role_models": {
+    "manager": {"provider": "codex", "model": "MODEL_ID_FROM_CODEX", "effort": "low"},
+    "architect": {"provider": "codex", "model": "MODEL_ID_FROM_CODEX"},
+    "dev": {"provider": "copilot", "model": "MODEL_ID_FROM_COPILOT"},
+    "test": {"provider": "copilot", "model": "MODEL_ID_FROM_COPILOT"}
+  }
+}

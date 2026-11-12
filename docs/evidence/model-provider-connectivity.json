@@ -1,0 +1,82 @@
+{
+  "kind": "REAL_HTTP_AND_MODEL_CONNECTIVITY",
+  "status": "passed",
+  "product_tools_executed": false,
+  "workflow_execution_ready": false,
+  "ui_model_panel": "rendered-with-real-backend",
+  "providers": [
+    {
+      "id": "codex",
+      "installed": true,
+      "authenticated": true,
+      "execution_ready": false
+    },
+    {
+      "id": "copilot",
+      "installed": true,
+      "authenticated": null,
+      "auth_source": "github-cli-explicit-opt-in",
+      "execution_ready": false
+    }
+  ],
+  "catalogs": [
+    {
+      "provider": "codex",
+      "source": "codex-live-app-server",
+      "count": 6
+    },
+    {
+      "provider": "copilot",
+      "source": "copilot-live-acp",
+      "count": 16
+    }
+  ],
+  "probes": [
+    {
+      "id": "822a5bb4-dba3-4fa7-a943-11f7134142a7",
+      "provider": "codex",
+      "requested_model": "gpt-6.1-sol",
+      "requested_effort": null,
+      "status": "succeeded",
+      "thread_id": "01a1ce61-3b4c-7f00-a0f6-c9471c6639a4",
+      "started_at": "2026-11-12T06:10:40.716Z",
+      "finished_at": "2026-11-12T06:10:47.808Z",
+      "result": {
+        "connected": true
+      },
+      "scope": "fixed-connectivity-probe-only",
+      "usage": {
+        "input_tokens": 12847,
+        "cached_input_tokens": 3505,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 9
+      },
+      "warnings": [
+        "SDK emitted an under-development-feature warning",
+        "SDK emitted a model-metadata fallback warning"
+      ]
+    },
+    {
+      "id": "4ca0b5fb-cf2f-4380-8f29-dae491c2b2c9",
+      "provider": "copilot",
+      "requested_model": "auto",
+      "requested_effort": null,
+      "status": "succeeded",
+      "thread_id": "b4a13b92-2dca-4359-8747-51a11c016f84",
+      "started_at": "2026-11-12T06:10:57.511Z",
+      "finished_at": "2026-11-12T06:11:05.962Z",
+      "result": {
+        "connected": true
+      },
+      "scope": "fixed-connectivity-probe-only",
+      "warnings": []
+    }
+  ],
+  "limitations": [
+    "Fixed diagnostic prompts only; no arbitrary chat or coding task was executed.",
+    "Production dispatch remains fail-closed for both providers.",
+    "Copilot CLI native authentication succeeded initially, then failed to resolve the selected GitHub account; final HTTP verification explicitly opted into existing GitHub CLI credentials.",
+    "Requested model does not prove the effective upstream model; Copilot auto may route dynamically.",
+    "No product UT, real build, deployment or E2E was performed."
+  ]
+}

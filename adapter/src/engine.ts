@@ -16,14 +16,15 @@ export function resolveCodex(): string {
 export class SdkEngine {
   codex: Codex;
   threads = new Map<string, Thread>();
-  constructor() {
+  constructor(probe = false) {
     this.codex = new Codex({
-      env: Object.fromEntries(Object.entries(process.env).filter(([key, value]) => value !== undefined && !['AIM_DESKTOP_BRIDGE_TOKEN', 'AIM_PROJECT_CONFIG', 'AIM_BRIDGE_CONFIG'].includes(key))) as Record<string, string>,
+      env: Object.fromEntries(Object.entries(process.env).filter(([key, value]) => value !== undefined && !['AIM_DESKTOP_BRIDGE_TOKEN', 'AIM_PROJECT_CONFIG', 'AIM_BRIDGE_CONFIG', 'COPILOT_GITHUB_TOKEN', 'GH_TOKEN', 'GITHUB_TOKEN'].includes(key))) as Record<string, string>,
       codexPathOverride: resolveCodex(),
       config: {
         approval_policy: 'never',
         sandbox_workspace_write: { network_access: false, exclude_tmpdir_env_var: true, exclude_slash_tmp: true, writable_roots: [] },
         web_search: 'disabled',
+        ...(probe ? { project_doc_max_bytes: 0, developer_instructions: 'Connectivity diagnostic only. Return the requested JSON without calling tools or reading instructions.', features: { shell_tool: false, unified_exec: false, skill_search: false, skill_mcp_dependency_install: false, tool_suggest: false } } : {}),
       },
     });
   }
@@ -33,6 +34,8 @@ export class SdkEngine {
     const roots = (request.role === 'test' ? request.test_paths ?? request.allowed_paths : request.allowed_paths)?.map(directory => canonicalDirectory(path.resolve(request.cwd, directory))) ?? [];
     if (roots.some(directory => !within(request.cwd, directory))) throw new Error('INVALID_SCOPE');
     const options = {
+      ...(request.model ? { model: request.model } : {}),
+      ...(request.effort ? { modelReasoningEffort: request.effort } : {}),
       workingDirectory: readOnly || !roots.length ? request.cwd : roots[0],
       sandboxMode: readOnly ? 'read-only' as const : 'workspace-write' as const,
       approvalPolicy: 'never' as const,

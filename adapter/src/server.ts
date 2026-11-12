@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { ApiError, capabilities } from './policy.ts';
 import { RunStore } from './store.ts';
 import { RunService, response } from './service.ts';
+import { providers, catalog, startProbe, getProbe, probeBusy } from './providers.ts';
 
 export function createServer(service: RunService): http.Server {
   return http.createServer(async (request, reply) => {
@@ -16,18 +17,27 @@ export function createServer(service: RunService): http.Server {
       const location = new URL(request.url ?? '/', `http://${expected}`);
       if (location.search) throw new ApiError(400, 'Query parameters unsupported');
       if (request.method === 'GET' && location.pathname === '/health') return send(200, capabilities);
+      if (request.method === 'GET' && location.pathname === '/providers') return send(200, await providers());
+      const probe = /^\/model-probes\/([0-9a-f-]{36})$/.exec(location.pathname);
+      if (request.method === 'GET' && probe) return send(200, getProbe(probe[1]));
       const match = /^\/runs\/([A-Za-z0-9_-]{1,128})(\/cancel)?$/.exec(location.pathname);
       if (match) {
         if (request.method === 'GET' && !match[2]) return send(200, response(service.get(match[1])));
         if (request.method === 'POST' && match[2]) return send(200, response(service.cancel(match[1])));
       }
-      if (request.method !== 'POST' || location.pathname !== '/runs') throw new ApiError(404, 'Unknown endpoint');
+      if (request.method !== 'POST' || !['/runs', '/model-catalog', '/model-probes'].includes(location.pathname)) throw new ApiError(404, 'Unknown endpoint');
       if (!/^application\/json(?:\s*;.*)?$/i.test(request.headers['content-type'] ?? '')) throw new ApiError(415, 'Content-Type application/json required');
       const chunks: Buffer[] = [];
       let size = 0;
       for await (const chunk of request) { size += chunk.length; if (size > 1048576) throw new ApiError(413, 'Request too large'); chunks.push(chunk); }
       let body: unknown;
       try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new ApiError(400, 'Invalid JSON'); }
+      if (location.pathname === '/model-catalog') return send(200, await catalog((body as any)?.provider));
+      if (location.pathname === '/model-probes') {
+        if (service.active) throw new ApiError(409, 'Workflow run active');
+        return send(202, startProbe(body));
+      }
+      if (probeBusy()) throw new ApiError(409, 'Connection probe active');
       const submitted = service.submit(body);
       return send(submitted.code, response(submitted.record));
     } catch (error) { send(error instanceof ApiError ? error.status : 500, { error: error instanceof ApiError ? error.message : 'Internal adapter error (details withheld)' }); }

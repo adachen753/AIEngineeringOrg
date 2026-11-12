@@ -19,6 +19,7 @@ def within(path: Path, root: Path) -> Path:
     return resolved
 
 def redact(value: str) -> str:
+    value = re.sub(r"\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b", "[REDACTED]", value)
     value = re.sub(r"sk-[A-Za-z0-9_\-]{8,}", "[REDACTED]", value)
     value = re.sub(r"(?i)(authorization\s*[:=]\s*(?:bearer\s+)?)[^\s\"']+", r"\1[REDACTED]", value)
     return re.sub(r"(?i)((?:api[_-]?key|password|access[_-]?token)\s*[=:]\s*)[^\s,\"']+", r"\1[REDACTED]", value)

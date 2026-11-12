@@ -13,6 +13,8 @@
 
 ## 新增配置与交付
 
+- 模型与账号面板：Codex SDK / GitHub Copilot ACP、模型目录、角色模型配置和真实连接验证，详见 [模型接入说明](docs/model-providers.md)。模型连通不代表角色源码执行隔离已通过。
+
 - 默认角色配置：`ai_manager/roles/config.json`，关联四角色各自的 Soul/Goal Markdown。可通过 `AIM_ROLE_CONFIG` 指定自定义配置；新任务保存配置快照。详见 `docs/role-configuration.md`。
 - 任务文件模板：`templates/submission.json` 与 `templates/submission.md`。UI 支持上传文件，CLI 支持文件提交；格式详见 `docs/submission-format.md`。文件内容不能代替显式执行授权。
 - 后台拥有 feature 分支与 `codex/integration/<任务ID>`，Reviewer 只读审查；交付记录包含分支、commit、审查及集成测试证据。不自动合入 main，不自动推送或创建远程 PR。

@@ -91,6 +91,7 @@ def validate_project_submission(submission, profile):
 def feature_submission(request: FeatureRequest):
     profile = load_project(request.project)
     return Submission(
+        role_models=request.role_models,
         repo=profile["repo"], base_commit=git(Path(profile["repo"]), "rev-parse", "HEAD"),
         feature=request.feature, allowed_paths=profile["allowed_paths"], acceptance=profile["acceptance"],
         workflow_kind="delivery", project_profile=request.project,

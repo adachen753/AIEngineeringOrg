@@ -169,13 +169,17 @@ class Engine:
         record["messages"].append(message)
         self.checkpoint(record)
         read_only = role in {"manager", "reviewer", "architect"} or (role == "test" and record["submission"].get("workflow_kind") == "delivery")
-        binding = str(cwd.resolve())
+        selection = record["submission"].get("role_models", {}).get(role, {})
+        selection = {key: value for key, value in selection.items() if value is not None}
+        binding = str(cwd.resolve()) + ("|" + json.dumps(selection, sort_keys=True) if selection else "")
         previous_binding = record.setdefault("thread_bindings", {}).get(role)
         thread_id = record["threads"].get(role) if previous_binding in {None, binding} else None
         record["thread_bindings"][role] = binding
         request = {"run_id": run_id, "thread_id": thread_id, "prompt": prompt, "cwd": str(cwd), "role": role,
                    "timeout_seconds": record["submission"]["timeout_seconds"], "output_schema": sdk_schema(),
                    "allowed_paths": [] if read_only else record["submission"]["test_paths"] if role == "test" else record["submission"]["allowed_paths"]}
+        request.update(selection)
+        attempt["agent_selection"] = selection or {"provider": "codex", "model": None}
         response = await self.client.post("/runs", json=request)
         if response.status_code >= 400:
             attempt["status"] = "failed"
