@@ -28,7 +28,7 @@ def main():
 
     role_models = model_settings(request)
 
-    with st.expander("提交 Feature"):
+    with st.expander("提交 Feature", expanded=True):
         uploaded = st.file_uploader("上传 Submission JSON / Markdown", type=["json", "md"])
         if uploaded is not None:
             data = uploaded.getvalue()

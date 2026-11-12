@@ -17,7 +17,7 @@ def model_settings(request):
                 st.write(f"**{item.get('id')}** · CLI：{'已发现' if item.get('installed') else '未发现'} · 认证：{account}")
                 if not item.get("execution_ready"):
                     st.warning("自动开发执行未就绪：" + str(item.get("blocker", "unknown")))
-            with st.expander("原始状态详情"):
+            if st.checkbox("显示原始状态详情", value=False, key="show_model_provider_details"):
                 st.json(st.session_state["model_provider_status"])
         st.caption("检查按钮仅检测 CLI、登录状态与执行能力，不会登录账号或验证模型响应。Codex 使用后台进程的本机认证环境；此页不读取或展示账号邮箱。")
         st.code("codex login\ncopilot login", language="powershell")
@@ -55,7 +55,7 @@ def model_settings(request):
         if enabled:
             for role in ("manager", "architect", "dev", "test", "reviewer"):
                 role_models[role] = dict(default)
-            with st.expander("按角色覆盖模型"):
+            if st.checkbox("按角色覆盖模型", value=False, key="show_role_model_overrides"):
                 for role in role_models:
                     if st.checkbox(role + " 单独配置", key="agent_override_" + role):
                         role_models[role] = choose(role, "agent_" + role)
