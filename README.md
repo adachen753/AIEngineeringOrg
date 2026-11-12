@@ -1,5 +1,12 @@
 # AIEngineeringOrg
 
+## 需求与设计文档
+
+- [需求说明](docs/20261111%20-%20requirement.md)
+- [高层设计](docs/20261111%20-%20high%20level%20design.md)
+- [实施提示词](docs/20261111%20-%20implementation%20prompt.md)
+- [GraphConnectors 知识包](docs/20261111%20-%20GraphConnectors%20knowledge%20pack.md)
+
 **当前未通过完整 MVP 验收。** 后台、UI/CLI、持久化和隔离验证执行器已实现；真实 SDK 新建/续聊/重启恢复实验已成功，但 Windows 命令 sandbox 在请求禁用网络时仍能连接 localhost。为避免角色间接调用后台绕过授权，生产角色调度保持 fail-closed，不使用 mock 或宽权限冒充完成。详见 docs/verification-status.md。
 
 本地 Python Git 小项目的串行 Manager 计划 → feature 分支上的 Dev 实现 → Test 验收及固定提交测试 → 独立 Reviewer → Manager 接纳 → integration 分支及集成测试 → 报告入口。每次提交表示一个 feature；暂不支持一次提交多个 feature 或跨任务自动合并。FastAPI 后台拥有唯一工作流执行器和 Git 写入权限；Streamlit 和 CLI 只访问同一 API、SQLite 状态和产物。关闭 UI 不会停止后台。
@@ -12,6 +19,8 @@
 - 新流程仍受适配层安全预检阻断。代码路径与本地测试不代表真实 SDK 全流程已验收；之前的 `docs/evidence` 是历史实验，不是新增流程的运行证据。
 
 ## 安装与配置（PowerShell，项目根目录）
+
+日常操作见 [启动、停止与重启说明](docs/start-stop.md)，包含本机 Node 路径、数据目录、日志与常见问题。
 
 需要 Python 3.12+、Node.js 24+、Git，以及适配层要求的有效 Codex 认证。不要在命令、提交文件或日志里放密钥。认证方式、SDK 接入与真实恢复证据以适配层的实际验证记录为准；本 README 不声称已经完成真实接入验收。
 无密钥配置示例见 .env.example（参考用，不自动加载；PowerShell 设置环境变量或用启动脚本参数）。真实只读 SDK 接入和恢复已经验证，完整角色工作流仍然阻塞。
@@ -111,3 +120,7 @@ MVP 只面向小型 Python Git 项目、单活动任务和有限修复/重试。
 Base commit 必须填写 40–64 位不可变十六进制 SHA，不接受 HEAD 或分支。现有测试文件的顶层 AST 节点必须保留：允许追加测试，不允许删改已接受断言；已有测试需要修正时保守阻塞，须人工检查，而不是自动放宽。
 
 架构和真实验收状态参见 docs/architecture.md、docs/codex-integration.md、docs/verification-status.md。真实 UI/API 提交驱动（独立无敏感 Git 测试仓库，使用 Streamlit AppTest 而非手动浏览器）：启动后台及适配层后运行 .\.venv\Scripts\python.exe acceptance/run.py。此驱动不模拟 Codex，状态为 blocked 就是实际阻塞，不是通过验收。
+# 四角色自动交付
+
+新增 Manager → 单 Architect → Dev → Build/Fix → Tester 部署/E2E → Manager 交付模式，默认最多修复 5 轮，可配置；不编写或运行 UT，不启用独立 Reviewer。
+配置与安全边界见 [四角色交付说明](docs/four-role-delivery.md)。真实 Agent 沙箱阻塞仍保留；真实 SF/Computer-use 驱动须先配置验证，不能视为已完成本机 E2E。

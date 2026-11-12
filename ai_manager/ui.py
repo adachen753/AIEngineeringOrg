@@ -24,6 +24,7 @@ def main():
             st.error(str(exc))
             return None
 
+
     with st.expander("提交 Feature"):
         uploaded = st.file_uploader("上传 Submission JSON / Markdown", type=["json", "md"])
         if uploaded is not None:
@@ -39,8 +40,15 @@ def main():
                     digest = hashlib.sha256(data + uploaded.name.encode("utf-8")).hexdigest()
                     file_approved = st.checkbox("明确授权上传文件的路径和固定测试命令", value=False,
                                                 key="file_approval_" + digest)
+                    file_deploy_approved = False
+                    if parsed.endpoint == "/features":
+                        file_deploy_approved = st.checkbox("明确授权项目专用本地 SF 部署和 E2E", value=False,
+                                                          key="file_deploy_approval_" + digest)
                     if st.button("提交上传文件"):
-                        result = request("/workflows", parsed.payload(approved=file_approved))
+                        payload = parsed.payload(approved=file_approved)
+                        if parsed.endpoint == "/features":
+                            payload["deploy_authorized"] = file_deploy_approved
+                        result = request(parsed.endpoint, payload)
                         if result is not None:
                             st.session_state["workflow_id"] = result["id"]
                             st.success("提交已保存；未授权任务等待审批。")
@@ -79,6 +87,26 @@ def main():
                     st.success("提交已保存；未授权任务等待审批。新任务请使用新的幂等键。")
             except ValueError as exc:
                 st.error(str(exc))
+
+    with st.expander("四角色自动交付：Manager → Architect → Dev → Tester", expanded=True):
+        st.caption("不编写/运行 UT；不启用 Reviewer。须先配置项目、真实 Agent 执行环境与部署/Computer-use bridge。")
+        with st.form("delivery_feature"):
+            project = st.text_input("已配置项目 ID", "graphconnectors")
+            delivery_feature = st.text_area("只告诉 Manager 要实现的 Feature")
+            max_rounds = st.number_input("最大自动修复轮数", min_value=0, max_value=20, value=5)
+            total_seconds = st.number_input("交付总时限（秒）", min_value=60, max_value=86400, value=7200)
+            delivery_key = st.text_input("Feature 幂等键", st.session_state.submission_key, key="delivery_key")
+            delivery_authorized = st.checkbox("明确授权项目配置中的源码改动和固定构建", value=False)
+            deployment_authorized = st.checkbox("明确授权项目配置中的专用本地 SF 部署和只读数据库/UI 验证", value=False)
+            delivery_submitted = st.form_submit_button("交给 Manager 自动交付")
+        if delivery_submitted:
+            result = request("/features", {"project": project, "feature": delivery_feature,
+                "idempotency_key": delivery_key, "authorized": delivery_authorized,
+                "deploy_authorized": deployment_authorized, "max_fix_rounds": int(max_rounds),
+                "total_timeout_seconds": int(total_seconds)})
+            if result is not None:
+                st.session_state["workflow_id"] = result["id"]
+                st.success("四角色任务已保存；前置能力未验证时将安全阻塞，不会伪报完成。")
 
     if st.button("刷新后台状态"):
         st.rerun()

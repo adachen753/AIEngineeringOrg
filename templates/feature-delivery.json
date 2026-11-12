@@ -1,0 +1,9 @@
+{
+  "project": "graphconnectors",
+  "feature": "REPLACE: describe the feature to Manager",
+  "idempotency_key": "REPLACE_UNIQUE_KEY",
+  "authorized": false,
+  "deploy_authorized": false,
+  "max_fix_rounds": 5,
+  "total_timeout_seconds": 7200
+}

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "projects": {
+    "graphconnectors": {
+      "enabled": false,
+      "repo": "Q:/GraphConnectors",
+      "allowed_paths": [
+        "sources/dev/REPLACE_COMPONENT"
+      ],
+      "acceptance": [
+        "REPLACE: measurable feature behavior",
+        "REPLACE: expected UI state and database values after the operation"
+      ],
+      "build_executable": "C:/REPLACE/MSBuild.exe",
+      "build_arguments": [
+        "sources/dev/REPLACE_COMPONENT/REPLACE.csproj",
+        "/t:Rebuild",
+        "/p:Configuration=Debug",
+        "/p:Platform=x64",
+        "/nologo"
+      ],
+      "build_output_paths": [
+        "target/REPLACE_DEPLOYABLE_PACKAGE"
+      ],
+      "build_timeout_seconds": 1800,
+      "bridge_url": "http://127.0.0.1:8767",
+      "resource_id": "REPLACE_DEDICATED_LOCAL_SF_APPLICATION",
+      "deployment_recipe": "REPLACE_APPROVED_RECIPE",
+      "scenario": "REPLACE_UI_AND_DATABASE_SCENARIO",
+      "checks": [
+        "service_healthy",
+        "ui_expected_state",
+        "database_expected_values"
+      ]
+    }
+  }
+}

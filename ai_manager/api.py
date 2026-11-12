@@ -8,7 +8,7 @@ from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from ai_manager.engine import Engine
-from ai_manager.models import Settings, Submission
+from ai_manager.models import FeatureRequest, Settings, Submission
 from ai_manager.store import Store
 
 
@@ -73,6 +73,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/workflows", status_code=201)
     def submit(submission: Submission):
         return invoke(app.state.store.submit, submission)
+
+    @app.post("/features", status_code=201)
+    def submit_feature(request: FeatureRequest):
+        return invoke(app.state.store.submit_feature, request)
 
     @app.get("/workflows/{workflow_id}")
     def detail(workflow_id: str):

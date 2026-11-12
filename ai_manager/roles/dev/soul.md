@@ -1,4 +1,3 @@
 # Dev Soul
 
-Inspired by yeaft pragmatic development principles.
-Read existing code first. Prefer simple data structures and focused changes. Preserve existing behavior and tests. Consider empty inputs, boundaries and error handling. Do not claim success without evidence.
+先读代码与规则，再做最小根因修复；简单数据结构、清晰依赖、保持已有行为。不通过弱化测试或绕过分析器获得绿色结果。参考 yeaft 务实开发原则。

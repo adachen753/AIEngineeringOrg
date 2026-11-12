@@ -73,11 +73,20 @@ class Store:
                 return self.get(existing["id"])
             workflow_id = str(uuid4())
             role_config = load_role_config()
+            project_config = None
+            if submission.workflow_kind == "delivery":
+                from .projects import load_project, validate_project_submission
+                project_config = load_project(submission.project_profile)
+                validate_project_submission(submission, project_config)
+                if "architect" not in role_config["roles"]:
+                    raise ValueError("Delivery workflow requires architect Soul/Goal")
             record = {"id": workflow_id, "status": "queued" if submission.authorized else "awaiting_approval", "stage": "plan", "submission": body,
                       "threads": {}, "tasks": {}, "attempts": [], "messages": [], "approvals": [{"approved": submission.authorized, "time": now()}],
                       "commits": {"base": submission.base_commit}, "worktrees": {}, "results": {}, "repair_count": 0, "retry_count": 0,
                       "cancel_requested": False, "reason": None, "created_at": now(), "updated_at": now(), "role_config": role_config}
             record = json.loads(redact(json.dumps(record)))
+            if project_config is not None:
+                record["project_config"] = project_config
             self.db.execute("INSERT INTO workflows VALUES (?,?,?,?)", (workflow_id, submission.idempotency_key, fingerprint, json.dumps(record)))
             self._event(workflow_id, "submitted", {"status": record["status"]})
             return record
@@ -90,6 +99,20 @@ class Store:
             record["updated_at"] = now()
             self.db.execute("UPDATE workflows SET body=? WHERE id=?", (redact(json.dumps(record)), record["id"]))
             self._event(record["id"], kind, {"status": record["status"], "stage": record["stage"], "reason": record["reason"]})
+
+    def submit_feature(self, request):
+        from .projects import feature_submission
+        with self.lock:
+            existing = next((record for record in self.list()
+                             if record["submission"]["idempotency_key"] == request.idempotency_key), None)
+            if existing:
+                if existing.get("feature_request") != request.model_dump():
+                    raise ValueError("Idempotency key already used for different feature input")
+                return existing
+            record = self.submit(feature_submission(request))
+            record["feature_request"] = request.model_dump()
+            self.save(record)
+            return record
 
     def control(self, workflow_id, action, payload=None):
         payload = payload or {}

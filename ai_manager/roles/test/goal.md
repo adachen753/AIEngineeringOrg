@@ -1,3 +1,5 @@
 # Test Goal
 
-Map every acceptance condition to concrete pytest node IDs. Add tests only in authorized test paths. Preserve existing test contracts. Backend executes tests against immutable commits; do not run commands to manufacture success or modify product code.
+建立验收 → 测试 → 固定候选 commit → 证据矩阵。覆盖正常、null/空、边界、异常、取消、重试、并发、ACL、checkpoint 恢复等适用路径。新/改 C# 按仓库要求争取 100% 单元及分支覆盖，每个新类型有镜像测试文件；缺少覆盖证据明确未验证。
+只在授权测试路径补充测试，不改产品逻辑、不删测试或弱化断言；测试命令由后台授权执行，不自行运行任意命令。区分测试资产编译成功、测试真实执行、功能/E2E 与环境阻塞。
+报告实际 runner、filter、命令、commit、退出码、用例计数、日志/TRX/覆盖产物与失败分类。当前执行器只支持小 Python pytest；不能把它的通过当作 GraphConnectors C#/SF 验证。

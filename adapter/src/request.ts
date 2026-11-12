@@ -7,7 +7,7 @@ export type RunRequest = {
   thread_id: string | null;
   prompt: string;
   cwd: string;
-  role: 'manager' | 'dev' | 'test' | 'reviewer';
+  role: 'manager' | 'architect' | 'dev' | 'test' | 'reviewer';
   timeout_seconds: number;
   output_schema?: Record<string, unknown>;
   allowed_paths?: string[];
@@ -24,7 +24,7 @@ export function validateRequest(input: any): RunRequest {
   if (typeof input.run_id !== 'string' || !runIdPattern.test(input.run_id)) throw new ApiError(400, 'Invalid run_id');
   if (input.thread_id !== null && (typeof input.thread_id !== 'string' || !threadIdPattern.test(input.thread_id))) throw new ApiError(400, 'Invalid thread_id');
   if (typeof input.prompt !== 'string' || !input.prompt.trim() || input.prompt.length > 100000) throw new ApiError(400, 'Invalid prompt');
-  if (!['manager', 'dev', 'test', 'reviewer'].includes(input.role)) throw new ApiError(400, 'Invalid role');
+  if (!['manager', 'architect', 'dev', 'test', 'reviewer'].includes(input.role)) throw new ApiError(400, 'Invalid role');
   if (!Number.isFinite(input.timeout_seconds) || input.timeout_seconds < 1 || input.timeout_seconds > 3600) throw new ApiError(400, 'timeout_seconds must be 1..3600');
   const cwd = canonicalDirectory(input.cwd);
   for (const key of ['allowed_paths', 'test_paths']) {
@@ -35,7 +35,7 @@ export function validateRequest(input: any): RunRequest {
       if (!within(cwd, resolved) || protectedPath(resolved)) throw new ApiError(403, 'Write scope must remain inside cwd');
     }
   }
-  if (['manager', 'reviewer'].includes(input.role) && (input.allowed_paths?.length || input.test_paths?.length)) throw new ApiError(400, 'Read-only role has no writable paths');
+  if (['manager', 'architect', 'reviewer'].includes(input.role) && (input.allowed_paths?.length || input.test_paths?.length)) throw new ApiError(400, 'Read-only role has no writable paths');
   if (input.output_schema !== undefined) validateSchema(input.output_schema);
   return { ...input, cwd };
 }

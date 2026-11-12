@@ -3,7 +3,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from ai_manager.models import Submission
+from ai_manager.models import FeatureRequest, Submission
 
 MAX_FILE_BYTES = 256 * 1024
 MAX_LIST_ITEMS = 100
@@ -15,11 +15,24 @@ MAX_PATH_LENGTH = 1024
 class SubmissionFile:
     submission: Submission
     description: str = ""
+    endpoint: str = "/workflows"
 
     def payload(self, *, approved: bool = False) -> dict:
         if type(approved) is not bool:
             raise ValueError("Approval must be an explicit boolean")
-        return self.submission.model_dump() | {"authorized": approved}
+        return self.submission.model_dump() | {"authorized": approved, "deploy_authorized": False}
+
+
+@dataclass(frozen=True)
+class FeatureFile:
+    submission: FeatureRequest
+    description: str = ""
+    endpoint: str = "/features"
+
+    def payload(self, *, approved: bool = False) -> dict:
+        if type(approved) is not bool:
+            raise ValueError("Approval must be an explicit boolean")
+        return self.submission.model_dump() | {"authorized": approved, "deploy_authorized": False}
 
 
 def _unique_object(pairs):
@@ -35,7 +48,7 @@ def _invalid_constant(value):
     raise ValueError(f"Invalid JSON constant: {value}")
 
 
-def parse_submission_file(data: bytes | str, filename: str) -> SubmissionFile:
+def parse_submission_file(data: bytes | str, filename: str) -> SubmissionFile | FeatureFile:
     if isinstance(data, str):
         try:
             data = data.encode("utf-8", errors="strict")
@@ -91,11 +104,13 @@ def parse_submission_file(data: bytes | str, filename: str) -> SubmissionFile:
         raise ValueError("Submission JSON contains invalid Unicode") from exc
     except RecursionError as exc:
         raise ValueError("Submission JSON is too deeply nested") from exc
+    if "project" in body:
+        return FeatureFile(submission=FeatureRequest.model_validate(body, strict=True), description=description)
     submission = Submission.model_validate(body, strict=True)
     return SubmissionFile(submission=submission, description=description)
 
 
-def load_submission_file(path: Path) -> SubmissionFile:
+def load_submission_file(path: Path) -> SubmissionFile | FeatureFile:
     with path.open("rb") as stream:
         data = stream.read(MAX_FILE_BYTES + 1)
     return parse_submission_file(data, path.name)

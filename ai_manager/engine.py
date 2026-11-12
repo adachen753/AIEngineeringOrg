@@ -44,6 +44,8 @@ class Engine:
         self.worktrees = Worktrees(store.root / "worktrees")
         self.processes = {}
         self.client = httpx.AsyncClient(base_url=settings.adapter_url, timeout=20)
+        from .delivery import DeliveryWorkflow
+        self.delivery = DeliveryWorkflow(self)
         graph = StateGraph(GraphState)
         graph.add_node("stage", self.step)
         graph.add_edge(START, "stage")
@@ -60,6 +62,9 @@ class Engine:
         self.store.save(record, "cancel_requested")
         uncertain = False
         resolved_attempts = {}
+        if record["submission"].get("workflow_kind") == "delivery":
+            uncertain = not await self.delivery.reconcile(record)
+            self.store.save(record)
         for attempt in record["attempts"]:
             if attempt["status"] == "running" and attempt.get("run_id"):
                 try:
@@ -104,6 +109,8 @@ class Engine:
             if record["status"] != "running" and not unresolved:
                 continue
             evidence = {"stage": record["stage"], "attempts": [], "worktrees": {}}
+            if record["submission"].get("workflow_kind") == "delivery":
+                await self.delivery.reconcile(record)
             for label, directory in record["worktrees"].items():
                 try:
                     evidence["worktrees"][label] = snapshot(Path(directory))
@@ -161,9 +168,14 @@ class Engine:
                    "type": "task", "code_version": git(cwd, "rev-parse", "HEAD"), "content": prompt, "delivery": "pending", "idempotency_key": run_id}
         record["messages"].append(message)
         self.checkpoint(record)
-        request = {"run_id": run_id, "thread_id": record["threads"].get(role), "prompt": prompt, "cwd": str(cwd), "role": role,
+        read_only = role in {"manager", "reviewer", "architect"} or (role == "test" and record["submission"].get("workflow_kind") == "delivery")
+        binding = str(cwd.resolve())
+        previous_binding = record.setdefault("thread_bindings", {}).get(role)
+        thread_id = record["threads"].get(role) if previous_binding in {None, binding} else None
+        record["thread_bindings"][role] = binding
+        request = {"run_id": run_id, "thread_id": thread_id, "prompt": prompt, "cwd": str(cwd), "role": role,
                    "timeout_seconds": record["submission"]["timeout_seconds"], "output_schema": sdk_schema(),
-                   "allowed_paths": [] if role in {"manager", "reviewer"} else record["submission"]["test_paths"] if role == "test" else record["submission"]["allowed_paths"]}
+                   "allowed_paths": [] if read_only else record["submission"]["test_paths"] if role == "test" else record["submission"]["allowed_paths"]}
         response = await self.client.post("/runs", json=request)
         if response.status_code >= 400:
             attempt["status"] = "failed"
@@ -219,7 +231,10 @@ class Engine:
         try:
             if not record["submission"]["authorized"]:
                 raise ValueError("Explicit repository authorization missing")
-            await getattr(self, record["stage"])(record)
+            if record["submission"].get("workflow_kind") == "delivery":
+                await self.delivery.step(record)
+            else:
+                await getattr(self, record["stage"])(record)
             if record["status"] == "running":
                 record["status"] = "queued"
             self.checkpoint(record)

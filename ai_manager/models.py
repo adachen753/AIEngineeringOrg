@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 class Settings(BaseModel):
     data_dir: Path = Path(".aim-data")
@@ -12,12 +12,25 @@ class Submission(BaseModel):
     base_commit: str = Field(pattern=r"^[0-9a-fA-F]{40,64}$")
     feature: str = Field(min_length=1, max_length=12000)
     allowed_paths: list[str] = Field(min_length=1)
-    test_paths: list[str] = Field(min_length=1)
+    test_paths: list[str] = Field(default_factory=list)
     acceptance: list[str] = Field(min_length=1)
     test_command: list[str] = ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]
     idempotency_key: str = Field(min_length=1, max_length=200)
     authorized: bool = False
     timeout_seconds: int = Field(default=300, ge=10, le=3600)
+    workflow_kind: Literal["legacy", "delivery"] = "legacy"
+    project_profile: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,80}$")
+    max_fix_rounds: int = Field(default=5, ge=0, le=20, strict=True)
+    total_timeout_seconds: int = Field(default=7200, ge=60, le=86400, strict=True)
+    deploy_authorized: bool = False
+
+    @model_validator(mode="after")
+    def workflow_requirements(self):
+        if self.workflow_kind == "legacy" and not self.test_paths:
+            raise ValueError("Legacy workflow requires test_paths")
+        if self.workflow_kind == "delivery" and (not self.project_profile or self.test_paths):
+            raise ValueError("Delivery requires project_profile and no unit-test paths")
+        return self
 
     @field_validator("allowed_paths", "test_paths")
     @classmethod
@@ -35,6 +48,17 @@ class Submission(BaseModel):
             raise ValueError("MVP permits only the fixed pytest runner")
         return command
 
+class FeatureRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    project: str = Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")
+    feature: str = Field(min_length=1, max_length=12000)
+    idempotency_key: str = Field(min_length=1, max_length=200)
+    authorized: bool = False
+    deploy_authorized: bool = False
+    max_fix_rounds: int = Field(default=5, ge=0, le=20, strict=True)
+    total_timeout_seconds: int = Field(default=7200, ge=60, le=86400, strict=True)
+
+
 class AcceptanceMapping(BaseModel):
     model_config = ConfigDict(extra="forbid")
     criterion: str
@@ -51,7 +75,7 @@ class AgentResult(BaseModel):
     classification: Literal["none", "product_bug", "test_issue", "data_issue", "environment", "flaky", "unknown"]
     mappings: list[AcceptanceMapping] = []
 
-STAGES = ["plan", "dev", "test", "verify", "review", "integrate", "integration_verify", "report", "done"]
+STAGES = ["plan", "architect", "dev", "build", "test", "deploy", "e2e", "assess", "verify", "review", "integrate", "integration_verify", "report", "done"]
 TERMINAL = {"succeeded", "failed", "blocked", "cancelled", "interrupted"}
 TRANSITIONS = {
     "queued": {"running", "cancelled"},
