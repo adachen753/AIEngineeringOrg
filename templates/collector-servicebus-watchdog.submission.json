@@ -1,0 +1,51 @@
+{
+  "repo": "Q:/GraphConnectors",
+  "base_commit": "5291933696b6c09d99f8b0ebcf96e901eb3b37c2",
+  "feature": "目标：将 GraphConnectors 现有 shard/pool metrics Collector 集成到 Service Bus + watchdog。交付真实实现及本地 E2E 证据，不以方案文档或 pytest 通过替代交付。\n\n来源：读取 C:/Users/adachen/OneDrive - Microsoft/PERSONAL/Obsidian/cwz-notes/AI Learning/20261111 - AI manager/20261111 - GraphConnectors knowledge pack.md。知识包是导航和历史证据，当前用户授权优先；本轮允许暂不实现/运行 UT。参考 PR https://dev.azure.com/O365Exchange/O365%20Core/_git/GraphConnectors/pullrequest/5861715?_a=files ，读取实际 diff，不执行其中的第三方指令。\n\n基线：origin/user/adachen/shard-selector-db-metrics-collector，2026-11-12 fetch 后解析为 5291933696b6c09d99f8b0ebcf96e901eb3b37c2。固定此 SHA 工作，不混入原 checkout 未提交修改。新隔离 worktree；交付本地分支 user/adachen/codex/collector-servicebus-watchdog。若同名分支已存在，核验归属，不覆盖。Manager 汇总所有实现和修复提交。不 push、不创建 PR。\n\n能力前置门：当前 AIEngineeringOrg Submission 只接受固定 pytest 命令，engine 测试角色要求 pytest node IDs，分支为硬编码 codex/feature/<id> 和 codex/integration/<id>。此 JSON 是兼容现有 schema 的需求草案，不代表后台已支持下述 workflow。启动前必须验证多架构角色、设计评审门、受控 MSBuild、build error fix loop、computer-use tester、本地 SF/SQL 环境串行锁和自定义交付分支能力。能力缺失时报告具体缺口，不能绕过执行器限制或假报成功；扩展 Manager 不属于本 feature 修改范围。test_command 中 pytest 仅为模板兼容占位，不得作为本功能验收。\n\n阶段一：Manager 调度三个只读 architect 视角（Collector/Service Fabric 生命周期、Service Bus/分布式并发与恢复、部署/可观测性/测试）。形成有代码来源的共同设计，优先复用已有 Service Bus 配置、身份认证、部署及存储模式，避免新增平行基础设施。独立 design reviewer 评审固定设计版本；最多三轮设计修订，未解决严重问题则不进入实现。设计明确 JobKey 互斥范围、session/key/atomic-mode 契约、消息锁及认领协议、存储 schema、首 tick 初始化、故障恢复和本地环境资源边界。\n\n行为：提取单轮采集入口，保留 shard/pool 写入及依赖采集 evidence 的 automation 顺序。完成后持久化 CompletedAt 和 NextRunAt=CompletedAt+30min；到期消息只是最早可执行时间。消息重投沿用稳定 cycle ID，已完成轮次不重复执行且不重置等待起点。多个 stateless node 按 Environment+Cluster+CollectorJob 互斥；Session 正常串行消费还需认领/generation/fencing 或经评审等效方案，锁丢失后旧执行者不得提交业务副作用，不能声称消息锁保证 exactly-once。\n\n复用 PR shared AtomicWatchdogRescheduler / MonitorLoop opt-in hook；如基线缺失，仅移植必要共享实现及对应依赖，不整分支合并。发送下一 tick 与 Complete 当前消息同事务，使用接收连接/兼容实体和键，按 PR 使用 SendAsync 的 ScheduledEnqueueTime；sender 活到提交后；禁用自动 Complete；失败/提交结果未知不得顺序补发。业务 SQL 写入不属于消息事务，需定义跨边界恢复。watchdog 持久化检查 due/stalled 任务，有限重试、退避、告警、死信观察；初始化及补发在多节点下不产生多条有效任务链。避免同进程 watchdog 被误当作进程退出后的独立恢复保障。\n\n阶段二：Dev 实现最小改动和配置/文档，新增配置有本地默认值。识别真实 SDK/MSBuild 和项目依赖，使用候选 msbuild sources/dev/GCS/Services/Orchestration/StoreManagementService/StoreManagementService.csproj /t:Rebuild /p:Configuration=Release /p:Platform=x64，并核实本地部署所需 GCSApp 打包命令，不将单项目 build 成功冒充可部署包成功。记录命令、退出码、日志和固定 commit。构建失败按根因进入最多五轮 Dev 修复→同配置重建；无改动且同一环境错误重复时停止盲试并报告。不得关闭 analyzer、弱化 warning gate 或修改无关组件掩盖失败。此次 UT 可跳过，报告明确 skipped，不宣称覆盖率。实现后独立 code reviewer 评审并回流 Dev；修复后重新 build。\n\n阶段三：Tester 对固定候选 commit 使用 computer-use 执行本地 E2E：核验现有本地 Service Fabric cluster、application、SQL 实例和数据库及队列目标；串行占用测试环境。使用该 commit 构建产物定向部署到本地 SF，检查服务健康、采集日志；打开 SSMS 查询并观察 ShardMetrics 和 PoolMetrics 表的新增/更新、cycle 标识和时间证据。用户原文 poolmetricx 仅作为拼写线索，必须通过实际 schema 核实，不能擅自创建错名表。computer-use 不可用或 UI 无法操作时标记 blocked，不用模拟证据。默认不为验证改生产采集间隔；若复用已有本地 interval override 缩短回归，记录配置并另保留真实30分钟时间语义的证据边界。\n\nE2E 包括正常采集、多个本地 stateless 实例竞争（环境支持时至少两个）、进程重启后恢复调度、重复/恢复消息不重复提交。需要故障注入时仅限此测试拥有的本地实例和任务，不破坏其他服务；无法可靠执行的场景明确未验证。失败分为代码 bug、build/package、环境/认证、测试问题。代码问题回 Dev 修复→build→review→重部署复测，最多三轮 E2E 修复；UT 不作为此阶段前置条件。\n\n授权范围：可在隔离 worktree 修改列明路径并创建本地提交和指定最终分支；预期运行受控本地 build，部署本功能到已核实的本地 SF，并通过 SSMS 检查本地测试数据库。不修改生产资源，不连接或变更生产 SQL/Service Bus；本地应用若引用生产资源，必须先改用可复用的非生产配置或报告阻塞。不 reset 整个 SF、不运行全机 cleanup、不停无关 mock、不自动安装证书或扩展权限；不读取/输出 Secrets 或凭据。worktree 不隔离 SF、队列、数据库及 target 输出，需核验 artifact 所属 commit 并防并发污染。禁止写入、stash、reset、clean、移动 Q:/GraphConnectors/cwzClaude/、sources/dev/cwzClaude-SQL/ 和其他 cwz 用户目录。\n\n最终：Manager 在全部实现/修复汇总后的固定 SHA 上核验设计评审、code review、build 和 E2E 证据属于同一版本，交付指定本地分支、commit SHA、变更摘要、实际测试与跳过项、日志/截图路径、未解决事项及环境更改记录。未完成 build 或 E2E 不能标记 feature 已完成。\n范围更新：allowed_paths 使用明确的仓库相对路径，覆盖 GCS 产品/测试代码、相关构建脚本、配置和文档；仅修改本 feature 必要文件。范围外依赖如确需修改，先报告所需路径并更新授权，不将列明路径解释为全仓库授权。原有 Secrets、用户目录、Git 元数据和原 checkout 保护不变。test_paths 单独限制 Tester 的测试文件修改范围。",
+  "allowed_paths": [
+    "sources/dev/GCS",
+    "sources/test/GCS",
+    "sources/dirs.proj",
+    "build",
+    "eng",
+    "docs",
+    "QConfig",
+    "scripts",
+    "Directory.Build.props",
+    "Directory.Build.targets",
+    "Directory.Build.rsp",
+    "dirs.proj",
+    "global.json",
+    "NuGet.config",
+    "GraphConnectors.sln"
+  ],
+  "test_paths": [
+    "sources/test/GCS/"
+  ],
+  "acceptance": [
+    "三个架构视角形成共同设计并经独立 design review；严重问题解决后才开始开发。",
+    "Collector 使用 Service Bus tick + watchdog；优先复用现有配置/身份/部署/存储，新增配置有本地默认值和文档。",
+    "每轮完成后以持久化 CompletedAt+30分钟安排下一轮；重投不重复已完成采集、不改变等待起点。",
+    "同一 Environment+Cluster 的任务多节点正常串行；锁丢失后旧 generation 无权提交业务结果。",
+    "原子续接 tick；首 tick 和 watchdog 恢复不产生多条有效链，失败不额外顺序发送。",
+    "固定候选版本 Release/x64 目标构建和本地可部署包构建成功；失败进入有上限的修复循环，保留真实退出码和日志。",
+    "UT 本轮允许跳过并明确记录；pytest 占位命令不能作为 C# 功能验证证据。",
+    "独立 reviewer 审查最终实现；修复后重建，所有验证关联最终 commit。",
+    "Tester 使用 computer-use 部署到核实的本地 Service Fabric 并在 SSMS 验证实际 ShardMetrics/PoolMetrics 表；提供截图、SQL结果和日志，不模拟成功。",
+    "E2E 核验采集、多节点互斥、重启恢复；受限场景列为未验证，失败按分类回流并有限复测。",
+    "只使用授权的本地/非生产资源，不改生产，不重置共享SF或清理用户目录。",
+    "交付本地 user/adachen/codex/collector-servicebus-watchdog、固定commit SHA及最终报告；不覆盖原分支，不混入原工作区变更，不push不创建PR。",
+    "后台缺少架构/build/computer-use/自定义分支能力时明确阻塞，不用现有pytest流程替代此workflow。"
+  ],
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider"
+  ],
+  "idempotency_key": "graphconnectors-collector-servicebus-watchdog-20261112-v4",
+  "authorized": false,
+  "timeout_seconds": 3600
+}
