@@ -1,0 +1,44 @@
+{
+  "repo": "Q:/AIEngineeringOrg",
+  "base_commit": "741adcd03ce181ce62846d758ad63e75033d49f2",
+  "feature": "目标：修复并真实验收 AIEngineeringOrg 的 Codex Agent 执行链。先完成 Manager 创建真实 thread、Dev 修改隔离目录、Reviewer 独立审查、Test 独立验证及 UI 证据展示，再另开任务接入 C# 构建和 SF E2E。本轮不修改 GraphConnectors、不部署 SF、不操作 SQL/Service Bus、不创建 PR 或 push。\n\n先检查当前代码、文档和实际运行版本，重现 adapter fail-closed 原因。不得仅将 policy.ts 的 blocked/ready 常量翻转，也不得用 mock、提示词约束或修改后 diff 检查代替真实权限边界。后台管理权限与 Agent 工具权限分离；Agent 不得获取批准任务、扩大路径权限或创建任意执行任务的管理能力。具体采用可验证的执行隔离方案；若需要管理员权限、安装新环境或迁移宿主，先报告所需操作，不能静默改变机器环境。认证复用安全机制，不读取或输出 token/密钥，不把管理凭据放进 Agent prompt、环境、可读文件或工具结果。\n\n本任务有引导依赖：若当前运行器因 adapter 阻塞不能派发，此模板必须交给已有可用的开发会话修复执行层；不能要求尚未可用的 Manager 自行解除阻塞。修复过程中保留失败证据，生产入口仅在已验证能力满足要求后开放。\n\n真实验收使用系统专属、无敏感内容的小型 Python Git fixture，不使用用户业务仓库。fixture 包含一个明确的小功能和可观察行为，例如带上限的重试延迟计算，具有正常输入、上限和非法输入用例；在执行前固定需求、验收条件和基线 SHA，不用角色创建的 marker 文件代替功能验证。fixture、worktrees、产物使用专属目录并记录所有权，不覆盖已有目录，不清理用户文件。Manager 源代码修改在隔离工作区完成，部署验证时不得覆盖正在运行的其他 workflow；重启需先检查活动任务并保留状态。\n\nManager：通过真实 Codex SDK 创建 thread，输出结构化计划及验收映射，记录 thread ID、阶段和时间。Dev：使用独立 thread，在授权产品路径的隔离 worktree 完成功能，不写原 checkout、不修改 Manager 权限或其他角色范围，交付固定提交。Test：使用独立 thread/工作区，仅在授权测试路径补充测试，给出与验收条件对应的 pytest node IDs；固定测试命令由后台执行器执行，保留实际命令、工作目录、退出码、日志和测试版本。Reviewer：使用不同于 Dev 的只读 thread，审查固定候选 SHA 和实际差异，输出有依据的结论；有发现则回流 Dev，最多一次修复，再对更新后的固定版本重新审查和测试。阶段先后以最终提交获得独立审查和测试为准，不为文案顺序伪造流程。最终代码、测试及评审必须关联同一候选版本。\n\n能力验证：分别验证角色写入允许目录成功、越界写入被拒绝、Agent 无法调用管理接口批准任务或扩大权限、未知权限请求被拒绝；所有探针只访问系统自有 fixture 和测试接口。另验证取消后执行停止及子进程状态、同一 thread 的合法续聊和适配层重启后的恢复行为；结果不确定时保留 interrupted，禁止盲目重放。不能仅以 HTTP 200、健康检查、单次无工具对话或 SDK 选项声明权限验证成功。按角色暴露实际能力及具体阻塞原因。\n\nUI：上传 JSON 仅填入可编辑表单；显式提交才创建任务；批准状态、阻塞原因和执行状态清晰可见。展示每个角色的名称、真实 thread ID、运行状态、阶段、开始/结束时间、已保存的公开对话或结构化结果、工具动作摘要和产物链接；与后端持久化记录对应。不得显示模型内部推理、明文凭据或未经清洗的敏感工具输出。说明 SDK thread 不保证出现在 Codex 桌面聊天侧栏，不把桌面会话可见性作为已实现能力。\n\n验证分层：控制流/权限失败场景可以用隔离单元测试；另保留不使用 mock 的完整真实角色运行及 UI 到 API 的证据。运行适合修改的 Python 和 adapter 测试，记录命令与退出码；实际 UI 上传、填表、显式提交、批准、刷新以及角色详情展示需要验证，不能仅以 AppTest mock 请求冒充真实全链路成功。\n\n交付：本地实现提交、fixture 基线和候选 SHA、workflow ID、各角色 thread ID、真实执行日志、独立审查结果、pytest 结果、权限探针结果、UI 截图或可复核证据、恢复/取消记录及未验证项。不要复制原始敏感会话。实现不完整或环境阻塞时如实标记，不能将这次 Python 验收推广为 GraphConnectors/C#/SF 已接通。后续只列出 C# runner、构建 profile、SF 环境锁和 computer-use 接入清单，不在本轮实现。",
+  "allowed_paths": [
+    "ai_manager",
+    "adapter/src",
+    "adapter/test",
+    "adapter/scripts",
+    "scripts",
+    "tests",
+    "acceptance",
+    "docs",
+    "templates",
+    "pyproject.toml",
+    "requirements.lock"
+  ],
+  "test_paths": [
+    "tests",
+    "adapter/test",
+    "acceptance"
+  ],
+  "acceptance": [
+    "后台管理权限与 Agent 执行边界经过真实探针验证；未通过时保持阻塞，不靠翻转常量放行。",
+    "真实 Manager、Dev、Test、Reviewer 各有独立 thread ID 和可追溯阶段结果，不以 mock 冒充真实调用。",
+    "Dev 在隔离 fixture 实现明确功能，原 checkout 和未授权路径保持不变；Test 独立补充测试，Reviewer 只读审查固定 SHA。",
+    "最终固定候选 SHA 获得真实 pytest 成功证据及独立 review；发现修复后对新版本重新验证。",
+    "实际验证禁止越界写入、Agent 管理接口越权、取消及恢复行为，记录成功/失败与未验证边界。",
+    "UI 上传仅填表，显式提交/批准后才能调度；角色状态、thread ID、公开结果和产物与持久化记录一致。",
+    "提供完整真实 workflow ID、各角色 thread ID、提交、命令、退出码、日志和 UI 证据；区分隔离 mock 测试与真实验收。",
+    "本轮不修改 GraphConnectors、不接入 C#/SF/SQL/Service Bus、不 push 或创建 PR；后续能力单列待办。"
+  ],
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider"
+  ],
+  "idempotency_key": "ai-manager-real-agent-workflow-20261112-v1",
+  "authorized": false,
+  "timeout_seconds": 3600
+}
