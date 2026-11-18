@@ -10,8 +10,8 @@
 
 ## 一次配置，后续只交 Feature
 
-1. 将 templates/projects.example.json 复制到目标仓库之外的运营者配置目录，例如 C:/AIManagerOperator/projects.json。填写并验证 repo、源码范围、固定 MSBuild 绝对路径与参数、部署包目录、资源/配方/场景 ID、验收基线及检查 ID；模板默认 disabled。
-2. 将 templates/desktop-bridge.example.json 同样复制并填写。artifact_root 必须对应后台数据目录的 worktrees；data_dir 和配置须在其外部。配置固定 deploy_command 与 e2e_command，脚本必须由运营者维护，不能从 Feature 或 Agent 输出生成任意命令。
+1. 将 config/examples/projects.example.json 复制到目标仓库之外的运营者配置目录，例如 C:/AIManagerOperator/projects.json。填写并验证 repo、源码范围、固定 MSBuild 绝对路径与参数、部署包目录、资源/配方/场景 ID、验收基线及检查 ID；模板默认 disabled。
+2. 将 config/examples/desktop-bridge.example.json 同样复制并填写。artifact_root 必须对应后台数据目录的 worktrees；data_dir 和配置须在其外部。配置固定 deploy_command 与 e2e_command，脚本必须由运营者维护，不能从 Feature 或 Agent 输出生成任意命令。
 3. 两个进程使用同一个至少 32 字符随机 AIM_DESKTOP_BRIDGE_TOKEN。不要写入任务、仓库、Markdown、截图或源码。Agent SDK、构建和桌面驱动子进程会剔除此环境变量；这不替代 OS 隔离。
 4. 先验证权限与真实场景，再将配置 enabled 改为 true。仅存在声明或标志不是安全验证证据。
 

@@ -13,6 +13,8 @@
 
 ## 新增配置与交付
 
+- 文件分类：[可复用任务模板](templates/README.md)、[运营者配置示例](config/examples/README.md)、[具体 Feature 需求](requirements/README.md)。配置示例和具体需求不再放入 templates/。
+
 - 模型与账号面板：Codex SDK / GitHub Copilot ACP、模型目录、角色模型配置和真实连接验证，详见 [模型接入说明](docs/model-providers.md)。模型连通不代表角色源码执行隔离已通过。
 
 - 默认角色配置：`ai_manager/roles/config.json`，关联四角色各自的 Soul/Goal Markdown。可通过 `AIM_ROLE_CONFIG` 指定自定义配置；新任务保存配置快照。详见 `docs/role-configuration.md`。
